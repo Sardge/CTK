@@ -93,12 +93,12 @@ void ctkDICOMIndexer::addFile(ctkDICOMDatabase& database,
   std::cout << filePath.toStdString();
   if (!destinationDirectoryName.isEmpty())
   {
-    logger.warn("Ignoring destinationDirectoryName parameter, just taking it as indication we should copy!");
+    logger.debug("Copying " + filePath + " into the destination directory: " + destinationDirectoryName);
   }
 
   emit indexingFilePath(filePath);
 
-  database.insert(filePath, !destinationDirectoryName.isEmpty(), true);
+  database.insert(filePath, !destinationDirectoryName.isEmpty(), true, true, destinationDirectoryName);
 }
 
 //------------------------------------------------------------------------------
@@ -118,7 +118,9 @@ void ctkDICOMIndexer::addDirectory(ctkDICOMDatabase& ctkDICOMDatabase,
     QDirIterator it(directoryName,QDir::Files,QDirIterator::Subdirectories);
     while(it.hasNext())
     {
-      listOfFiles << it.next();
+      QString currentPath( it.next() );
+      currentPath.replace("\\","/");
+      listOfFiles << currentPath;
     }
     emit foundFilesToIndex(listOfFiles.count());
     addListOfFiles(ctkDICOMDatabase,listOfFiles,destinationDirectoryName);
@@ -133,6 +135,12 @@ void ctkDICOMIndexer::addListOfFiles(ctkDICOMDatabase& ctkDICOMDatabase,
   Q_D(ctkDICOMIndexer);
   d->Canceled = false;
   int CurrentFileIndex = 0;
+
+  if ( !destinationDirectoryName.isEmpty() )
+  {
+    qDebug() << "destinationDirectory is set to " << destinationDirectoryName;
+  }
+
   foreach(QString filePath, listOfFiles)
   {
     int percent = ( 100 * CurrentFileIndex ) / listOfFiles.size();
@@ -174,7 +182,7 @@ void ctkDICOMIndexer::addDicomdir(ctkDICOMDatabase& ctkDICOMDatabase,
 
   /*Iterate over all records in dicomdir and setup path to the dataset of the filerecord
   then insert. the filerecord into the database.
-  If any UID is missing the record and all of it's subelements won't be added to the database*/
+  If any UID is missing the record and all of it's sub-elements won't be added to the database*/
   if(rootRecord != NULL)
   {
     while (((patientRecord = rootRecord->nextSub(patientRecord)) != NULL)
@@ -186,7 +194,7 @@ void ctkDICOMIndexer::addDicomdir(ctkDICOMDatabase& ctkDICOMDatabase,
       while (((studyRecord = patientRecord->nextSub(studyRecord)) != NULL)
         && (studyRecord->findAndGetOFString(DCM_StudyInstanceUID, studyInstanceUID).good()))
       {
-        logger.debug( "Reading new Studys:" );
+        logger.debug( "Reading new Studies:" );
         logger.debug( "Studies Name: " + QString(studyInstanceUID.c_str()) );
 
         while (((seriesRecord = studyRecord->nextSub(seriesRecord)) != NULL)

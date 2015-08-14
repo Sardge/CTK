@@ -80,6 +80,9 @@ public:
   // used when suspending the ctkDICOMModel
   QSqlDatabase EmptyDatabase;
 
+  // destination directory for DICOM files being copied
+  QString DestinationDICOMDirectory;
+
   // local count variables to keep track of the number of items
   // added to the database during an import operation
   bool DisplayImportSummary;
@@ -369,10 +372,27 @@ void ctkDICOMBrowser::setDatabaseDirectory(const QString& directory)
 }
 
 //----------------------------------------------------------------------------
+void ctkDICOMBrowser::setDestinationDICOMDirectory( QString const & destinationDirectory )
+{
+  Q_D( ctkDICOMBrowser );
+
+  if ( !destinationDirectory.isEmpty() || ( d->DestinationDICOMDirectory == destinationDirectory ) )
+    d->DestinationDICOMDirectory = destinationDirectory;
+}
+
+//----------------------------------------------------------------------------
 QString ctkDICOMBrowser::databaseDirectory() const
 {
   QSettings settings;
   return settings.value("DatabaseDirectory").toString();
+}
+
+//----------------------------------------------------------------------------
+QString ctkDICOMBrowser::destinationDICOMDirectory() const
+{
+  Q_D( const ctkDICOMBrowser );
+
+  return d->DestinationDICOMDirectory;
 }
 
 //------------------------------------------------------------------------------
@@ -596,10 +616,11 @@ void ctkDICOMBrowser::onImportDirectory(QString directory)
 {
   Q_D(ctkDICOMBrowser);
 
+  // hide the sender
+  d->ImportDialog->hide();
+
   if (QDir(directory).exists())
   {
-    QString targetDirectory;
-
     QCheckBox* copyOnImport = qobject_cast<QCheckBox*>(d->ImportDialog->bottomWidget());
 
     ctkMessageBox importTypeDialog;
@@ -615,6 +636,31 @@ void ctkDICOMBrowser::onImportDirectory(QString directory)
     if (selection== QMessageBox::AcceptRole)
     {
       copyOnImport->setCheckState(Qt::Checked);
+
+      if ( d->DestinationDICOMDirectory.isEmpty() )
+      {
+        //prompting for destinationDirectory
+        ctkFileDialog destinationDirectoryDialog;
+        destinationDirectoryDialog.setFileMode( QFileDialog::Directory );
+        destinationDirectoryDialog.setLabelText( QFileDialog::Accept, "Choose" );
+        destinationDirectoryDialog.setWindowTitle( "Choose DICOM destination directory ..." );
+        destinationDirectoryDialog.setWindowModality( Qt::ApplicationModal );
+
+        int destDirDialogReturnCode( -1 );
+
+        while ( QDialog::Accepted != destDirDialogReturnCode )
+        {
+          if ( QDialog::Rejected == destDirDialogReturnCode )
+          {
+            QMessageBox::warning( this,
+                                  QString( "DICOM Warning" ),
+                                  QString( "The destination directory can not be empty" ) );
+          }
+
+          destDirDialogReturnCode = destinationDirectoryDialog.exec();
+        }
+        d->DestinationDICOMDirectory = destinationDirectoryDialog.selectedFiles().first();
+      }
     }
     else
     {
@@ -627,14 +673,9 @@ void ctkDICOMBrowser::onImportDirectory(QString directory)
     d->SeriesAddedDuringImport = 0;
     d->InstancesAddedDuringImport = 0;
 
-    if (copyOnImport->checkState() == Qt::Checked)
-    {
-      targetDirectory = d->DICOMDatabase->databaseDirectory();
-    }
-
     // show progress dialog and perform indexing
     d->showIndexerDialog();
-    d->DICOMIndexer->addDirectory(*d->DICOMDatabase,directory,targetDirectory);
+    d->DICOMIndexer->addDirectory(*d->DICOMDatabase,directory, d->DestinationDICOMDirectory);
 
     // display summary result
     if (d->DisplayImportSummary)
@@ -645,6 +686,13 @@ void ctkDICOMBrowser::onImportDirectory(QString directory)
       message += QString("%1 New Series\n").arg(QString::number(d->SeriesAddedDuringImport));
       message += QString("%1 New Instances\n").arg(QString::number(d->InstancesAddedDuringImport));
       QMessageBox::information(this,"DICOM Directory Import", message);
+    }
+
+    if ( ( d->StudiesAddedDuringImport > 1 || d->SeriesAddedDuringImport > 1 ) && d->PatientsAddedDuringImport == 1 )
+    {
+      // retrieve the latest added patient
+      QString latestPatient = d->DICOMDatabase->patients().last();
+      emit multipleSeriesImported( latestPatient );
     }
   }
 }

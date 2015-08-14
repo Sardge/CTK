@@ -39,6 +39,7 @@ class CTK_DICOM_WIDGETS_EXPORT ctkDICOMBrowser : public QWidget
   Q_OBJECT
   Q_PROPERTY(ctkDICOMDatabase* database READ database)
   Q_PROPERTY(QString databaseDirectory READ databaseDirectory WRITE setDatabaseDirectory)
+  Q_PROPERTY(QString destinationDICOMDirectory READ destinationDICOMDirectory WRITE setDestinationDICOMDirectory)
   Q_PROPERTY(QStringList tagsToPrecache READ tagsToPrecache WRITE setTagsToPrecache)
   Q_PROPERTY(bool displayImportSummary READ displayImportSummary WRITE setDisplayImportSummary)
   Q_PROPERTY(ctkDICOMTableManager* dicomTableManager READ dicomTableManager)
@@ -50,6 +51,9 @@ public:
 
   /// Directory being used to store the dicom database
   QString databaseDirectory() const;
+
+  /// Destination directory where the DICOM structure is copied
+  QString destinationDICOMDirectory() const;
 
   /// See ctkDICOMDatabase for description - these accessors
   /// delegate to the corresponding routines of the internal
@@ -80,6 +84,7 @@ public:
 
 public Q_SLOTS:
   void setDatabaseDirectory(const QString& directory);
+  void setDestinationDICOMDirectory( QString const & destinationDirectory);
   void onFileIndexed(const QString& filePath);
 
   void openImportDialog();
@@ -109,6 +114,8 @@ Q_SIGNALS:
   void queryRetrieveFinished();
   /// Emited when the directory import operation has completed
   void directoryImported();
+  /// Emited when more then 1 study/series of the patient were imported
+  void multipleSeriesImported( QString const & patientName );
 
 protected:
     QScopedPointer<ctkDICOMBrowserPrivate> d_ptr;

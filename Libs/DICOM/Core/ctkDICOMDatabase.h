@@ -166,10 +166,10 @@ public:
   void setTagsToPrecache(const QStringList tags);
   const QStringList tagsToPrecache();
 
-  /// Insert into the database if not already exsting.
+  /// Insert into the database if not already existing.
   /// @param dataset The dataset to store into the database. Usually, this is
   ///                is a complete DICOM object, like a complete image. However
-  ///                the database also inserts partial objects, like studyl
+  ///                the database also inserts partial objects, like study
   ///                information to the database, even if no image data is
   ///                contained. This can be helpful to store results from
   ///                querying the PACS for patient/study/series or image
@@ -180,11 +180,13 @@ public:
   ///                  database, this flag is ignored. Usually, this flag
   ///                  does only make sense if a full object is received.
   /// @param @generateThumbnail If true, a thumbnail is generated.
+  /// @param @destinationDirectoryName The destination directory for the DICOM
+  ///                                  structure being copied
   ///
   Q_INVOKABLE void insert( const ctkDICOMItem& ctkDataset,
-                              bool storeFile, bool generateThumbnail);
+                           bool storeFile, bool generateThumbnail );
   void insert ( DcmItem *item,
-                              bool storeFile = true, bool generateThumbnail = true);
+                bool storeFile = true, bool generateThumbnail = true );
   Q_INVOKABLE void insert ( const QString& filePath,
                             bool storeFile = true, bool generateThumbnail = true,
                             bool createHierarchy = true,
