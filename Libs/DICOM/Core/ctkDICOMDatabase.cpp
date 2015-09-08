@@ -96,7 +96,12 @@ public:
 
   // dataset must be set always
   // filePath has to be set if this is an import of an actual file
-  void insert ( const ctkDICOMItem& ctkDataset, const QString& filePath, bool storeFile = true, bool generateThumbnail = true, QString const & destinationDirectoryName = QString() );
+  void insert ( const ctkDICOMItem& ctkDataset,
+                const QString& filePath,
+                bool storeFile = true,
+                bool generateThumbnail = true,
+                QString const & sourceDirectoryName = QString(),
+                QString const & destinationDirectoryName = QString() );
 
   ///
   /// copy the complete list of files to an extra table
@@ -903,7 +908,7 @@ QString ctkDICOMDatabase::fileValue(const QString fileName, const unsigned short
   // - if so, are we looking for a group/element that is past the last one
   //   accessed
   //   -- if so, keep looking for the requested group/element
-  //   -- if not, start again from the begining
+  //   -- if not, start again from the beginning
 
   QString tag = this->groupElementToTag(group, element);
   QString sopInstanceUID = this->instanceForFile(fileName);
@@ -972,7 +977,7 @@ void ctkDICOMDatabase::insert( const ctkDICOMItem& ctkDataset, bool storeFile, b
 }
 
 //------------------------------------------------------------------------------
-void ctkDICOMDatabase::insert ( const QString& filePath, bool storeFile, bool generateThumbnail, bool createHierarchy, const QString& destinationDirectoryName )
+void ctkDICOMDatabase::insert( const QString& filePath, bool storeFile, bool generateThumbnail, bool createHierarchy, const QString& sourceDirectoryName , const QString& destinationDirectoryName )
 {
   Q_D(ctkDICOMDatabase);
   Q_UNUSED(createHierarchy);
@@ -982,7 +987,9 @@ void ctkDICOMDatabase::insert ( const QString& filePath, bool storeFile, bool ge
   if ( !destinationDirectoryName.isEmpty() && storeFile )
   {
     // if destinationDirectory is set, we compose the final filePath with respect to destination path
-    finalFilePath = destinationDirectoryName + "/" + filePath.section( '/', 1 );
+    QString relativeFilePath( filePath );
+    relativeFilePath.remove( sourceDirectoryName );
+    finalFilePath = destinationDirectoryName + relativeFilePath;
   }
   // first we check if the file is already in the database
   if ( fileExistsAndUpToDate( finalFilePath ) )
@@ -999,14 +1006,18 @@ void ctkDICOMDatabase::insert ( const QString& filePath, bool storeFile, bool ge
   ctkDICOMItem ctkDataset;
 
   ctkDataset.InitializeFromFile( filePath );
-  QString imageTypeStr( ctkDataset.GetElementAsString( DCM_ImageType ) );
-  // finding out whether this image is derived (not from original series)
-  bool isNotFromOriginalSeries = ( imageTypeStr.contains( "SECONDARY", Qt::CaseInsensitive ) || 
-                                   imageTypeStr.contains( "VOLUME", Qt::CaseInsensitive ) ||
-                                   imageTypeStr.contains( "RESAMPLED", Qt::CaseInsensitive ) );
-  if ( ctkDataset.IsInitialized() && !isNotFromOriginalSeries )
+  
+  if ( ctkDataset.IsInitialized() )
   {
-    d->insert( ctkDataset, filePath, storeFile, generateThumbnail, destinationDirectoryName );
+    QString imageTypeStr( ctkDataset.GetElementAsString( DCM_ImageType ) );
+    // finding out whether this image is derived (not from original series)
+    bool isNotFromOriginalSeries = ( imageTypeStr.contains( "SECONDARY", Qt::CaseInsensitive ) || 
+                                     imageTypeStr.contains( "VOLUME", Qt::CaseInsensitive ) ||
+                                     imageTypeStr.contains( "RESAMPLED", Qt::CaseInsensitive ) );
+    if ( !isNotFromOriginalSeries )
+    {
+      d->insert( ctkDataset, filePath, storeFile, generateThumbnail, sourceDirectoryName, destinationDirectoryName );
+    }
   }
   else
   {
@@ -1217,7 +1228,8 @@ void ctkDICOMDatabasePrivate::precacheTags( const QString sopInstanceUID )
 }
 
 //------------------------------------------------------------------------------
-void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem& ctkDataset, const QString& filePath, bool storeFile, bool generateThumbnail, QString const & destinationDirectoryName )
+void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QString & filePath, bool storeFile, bool generateThumbnail,
+                                      QString const & sourceDirectoryName, QString const & destinationDirectoryName )
 {
   Q_Q(ctkDICOMDatabase);
 
@@ -1231,10 +1243,19 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem& ctkDataset, const QStr
   //
   
   QString finalFilePath( filePath );
-  if ( !destinationDirectoryName.isEmpty() && storeFile )
+  QString relativeFilePath( filePath );
+  if ( !sourceDirectoryName.isEmpty() && !destinationDirectoryName.isEmpty() && storeFile )
   {
     // if destinationDirectory is set, we compose the final filePath with respect to destination path
-    finalFilePath = destinationDirectoryName + "/" + filePath.section( '/', 1 );
+    relativeFilePath.remove( sourceDirectoryName );
+    if ( destinationDirectoryName.endsWith( "/" ) || relativeFilePath.startsWith( "/" ) )
+    {
+      finalFilePath = destinationDirectoryName + relativeFilePath;
+    }
+    else
+    {
+      finalFilePath = destinationDirectoryName + "/" + relativeFilePath;
+    }
   }
 
   QString sopInstanceUID ( ctkDataset.GetElementAsString(DCM_SOPInstanceUID) );
@@ -1255,7 +1276,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem& ctkDataset, const QStr
     QDateTime fileLastModified(QFileInfo(databaseFilename).lastModified());
     QDateTime databaseInsertTimestamp(QDateTime::fromString(fileExistsQuery.value(0).toString(),Qt::ISODate));
 
-    qDebug() << "inserting filePath: " << filePath;
+    qDebug() << "inserting filePath: " << finalFilePath;
     if (databaseFilename == "")
     {
       qDebug() << "database filename for " << sopInstanceUID << " is empty - we should insert on top of it";
@@ -1289,7 +1310,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem& ctkDataset, const QStr
   QString patientID( ctkDataset.GetElementAsString( DCM_PatientID ) );
   QString patientName( ctkDataset.GetElementAsString( DCM_PatientName ) );
   // remove any special characters form Patient name
-  patientName.replace( QRegExp( "[~^_*]" ), " " );
+  patientName.replace( QRegExp( "[~\^_\*]" ), " " );
 
   if ( patientID.isEmpty() && !studyInstanceUID.isEmpty() )
   { // Use study instance uid as patient id if patient id is empty - can happen on anonymized datasets
@@ -1314,18 +1335,24 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem& ctkDataset, const QStr
   //
   if ( storeFile && !q->isInMemory() && !seriesInstanceUID.isEmpty() )
   {
-    // the subpath of the original DICOM structure to be created in the destination directory
-    QString destinationSubDirToCreate = finalFilePath.section( '/', 1, -2 );
-    QDir destinationDir( destinationDirectoryName );
-    destinationDir.mkpath( destinationSubDirToCreate );
-
-    if(filePath.isEmpty())
+    // the destination directory + 
+    QString destinationDirStr( finalFilePath.section( "/", 0, -2 ) );
+    QDir destinationDir( destinationDirStr );
+    if ( !destinationDir.exists() )
+    {
+      if ( !destinationDir.mkpath( "." ) )
+      {
+        qDebug() << "Failed creating subdirectory in the " << destinationDir;
+      }
+    }
+    
+    if( filePath.isEmpty() )
     {
       QString filename = destinationDirectoryName + "/" +
-                         patientName + "/" +
-                         studyInstanceUID + "/" +
-                         seriesInstanceUID + "/" +
-                         sopInstanceUID;
+        patientName + "/" +
+        studyInstanceUID + "/" +
+        seriesInstanceUID + "/" +
+        sopInstanceUID;
       finalFilePath = filename;
       logger.debug( "Saving file: " + filename );
 
@@ -1337,10 +1364,11 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem& ctkDataset, const QStr
     }
     else
     {
-      // we're inserting an existing file
-
-      QFile currentFile( filePath );
-      currentFile.copy( finalFilePath );
+      // copying the source file
+      if ( !QFile::copy( filePath, finalFilePath ) )
+      {
+        qDebug() << "Copying of " << filePath << "failed!";
+      }
       logger.debug( "Copy file from: " + filePath );
       logger.debug( "Copy file to  : " + finalFilePath );
     }

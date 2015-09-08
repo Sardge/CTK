@@ -180,6 +180,8 @@ public:
   ///                  database, this flag is ignored. Usually, this flag
   ///                  does only make sense if a full object is received.
   /// @param @generateThumbnail If true, a thumbnail is generated.
+  /// @param @sourceDirectoryName The source directory containing the DICOM
+  ///                             structure
   /// @param @destinationDirectoryName The destination directory for the DICOM
   ///                                  structure being copied
   ///
@@ -190,6 +192,7 @@ public:
   Q_INVOKABLE void insert ( const QString& filePath,
                             bool storeFile = true, bool generateThumbnail = true,
                             bool createHierarchy = true,
+                            const QString & sourceDirectoryName = QString(),
                             const QString& destinationDirectoryName = QString() );
 
   /// Check if file is already in database and up-to-date

@@ -68,7 +68,8 @@ public:
   /// DICOM images accordingly.
   ///
   Q_INVOKABLE void addListOfFiles(ctkDICOMDatabase& database, const QStringList& listOfFiles,
-                    const QString& destinationDirectoryName = "");
+                    const QString & sourceDirectoryName = "",
+                    const QString & destinationDirectoryName = "");
 
   ///
   /// \brief Adds a file to database and optionally copies the file to
@@ -78,6 +79,7 @@ public:
   /// DICOM fields accordingly.
   ///
   Q_INVOKABLE void addFile(ctkDICOMDatabase& database, const QString filePath,
+                    const QString & sourceDirectoryName = "",
                     const QString& destinationDirectoryName = "");
 
   Q_INVOKABLE void refreshDatabase(ctkDICOMDatabase& database, const QString& directoryName);

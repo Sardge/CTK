@@ -88,17 +88,18 @@ ctkDICOMIndexer::~ctkDICOMIndexer()
 //------------------------------------------------------------------------------
 void ctkDICOMIndexer::addFile(ctkDICOMDatabase& database,
                                    const QString filePath,
+                                   const QString & sourceDirectoryName,
                                    const QString& destinationDirectoryName)
 {
   std::cout << filePath.toStdString();
-  if (!destinationDirectoryName.isEmpty())
+  if ( !destinationDirectoryName.isEmpty() )
   {
-    logger.debug("Copying " + filePath + " into the destination directory: " + destinationDirectoryName);
+    logger.debug( "Copying " + filePath + " into the destination directory: " + destinationDirectoryName );
   }
 
-  emit indexingFilePath(filePath);
+  emit indexingFilePath( filePath );
 
-  database.insert(filePath, !destinationDirectoryName.isEmpty(), true, true, destinationDirectoryName);
+  database.insert( filePath, !destinationDirectoryName.isEmpty(), true, true, sourceDirectoryName, destinationDirectoryName );
 }
 
 //------------------------------------------------------------------------------
@@ -119,17 +120,18 @@ void ctkDICOMIndexer::addDirectory(ctkDICOMDatabase& ctkDICOMDatabase,
     while(it.hasNext())
     {
       QString currentPath( it.next() );
-      currentPath.replace("\\","/");
+      qDebug() << currentPath;
       listOfFiles << currentPath;
     }
     emit foundFilesToIndex(listOfFiles.count());
-    addListOfFiles(ctkDICOMDatabase,listOfFiles,destinationDirectoryName);
+    addListOfFiles( ctkDICOMDatabase, listOfFiles, directoryName, destinationDirectoryName );
   }
 }
 
 //------------------------------------------------------------------------------
 void ctkDICOMIndexer::addListOfFiles(ctkDICOMDatabase& ctkDICOMDatabase,
                                      const QStringList& listOfFiles,
+                                     const QString & sourceDirectoryName,
                                      const QString& destinationDirectoryName)
 {
   Q_D(ctkDICOMIndexer);
@@ -145,7 +147,7 @@ void ctkDICOMIndexer::addListOfFiles(ctkDICOMDatabase& ctkDICOMDatabase,
   {
     int percent = ( 100 * CurrentFileIndex ) / listOfFiles.size();
     emit this->progress(percent);
-    this->addFile(ctkDICOMDatabase, filePath, destinationDirectoryName);
+    this->addFile( ctkDICOMDatabase, filePath, sourceDirectoryName, destinationDirectoryName );
     CurrentFileIndex++;
 
     if( d->Canceled )
