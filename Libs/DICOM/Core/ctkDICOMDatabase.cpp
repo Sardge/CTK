@@ -38,8 +38,6 @@
 #include "ctkDICOMAbstractThumbnailGenerator.h"
 #include "ctkDICOMItem.h"
 
-#include "ctkLogger.h"
-
 // DCMTK includes
 #include <dcmtk/dcmdata/dcfilefo.h>
 #include <dcmtk/dcmdata/dcfilefo.h>
@@ -56,9 +54,6 @@
 #include <dcmtk/dcmdata/dcrledrg.h>  /* for DcmRLEDecoderRegistration */
 #include <dcmtk/dcmdata/dcrleerg.h>  /* for DcmRLEEncoderRegistration */
 
-//------------------------------------------------------------------------------
-static ctkLogger logger("org.commontk.dicom.DICOMDatabase" );
-//------------------------------------------------------------------------------
 
 // Flag for tag cache to avoid repeated serarches for
 // tags that do no exist.
@@ -214,28 +209,28 @@ bool ctkDICOMDatabasePrivate::loggedExec(QSqlQuery& query)
 bool ctkDICOMDatabasePrivate::loggedExec(QSqlQuery& query, const QString& queryString)
 {
   bool success;
-  if (queryString.compare(""))
-    {
-      success = query.exec(queryString);
-    }
+  if ( queryString.compare( "" ) )
+  {
+    success = query.exec( queryString );
+  }
   else
     {
       success = query.exec();
     }
-  if (!success)
-    {
-      QSqlError sqlError = query.lastError();
-      logger.debug( "SQL failed\n Bad SQL: " + query.lastQuery());
-      logger.debug( "Error text: " + sqlError.text());
-    }
+  if ( !success )
+  {
+    QSqlError sqlError = query.lastError();
+    qWarning() << "SQL failed\n Bad SQL: " << query.lastQuery();
+    qWarning() << "Error text: " << sqlError.text();
+  }
   else
+  {
+    if ( LoggedExecVerbose )
     {
-      if (LoggedExecVerbose)
-      {
-      logger.debug( "SQL worked!\n SQL: " + query.lastQuery());
-      }
+      qDebug() << "SQL worked!\n SQL: " << query.lastQuery();
     }
-  return (success);
+  }
+  return ( success );
 }
 
 //------------------------------------------------------------------------------
@@ -246,14 +241,14 @@ bool ctkDICOMDatabasePrivate::loggedExecBatch(QSqlQuery& query)
   if (!success)
     {
       QSqlError sqlError = query.lastError();
-      logger.debug( "SQL failed\n Bad SQL: " + query.lastQuery());
-      logger.debug( "Error text: " + sqlError.text());
+      qWarning() << "SQL failed\n Bad SQL: " << query.lastQuery();
+      qWarning() << "Error text: " << sqlError.text();
     }
   else
     {
       if (LoggedExecVerbose)
       {
-      logger.debug( "SQL worked!\n SQL: " + query.lastQuery());
+        qDebug() << "SQL worked!\n SQL: " << query.lastQuery();
       }
     }
   return (success);
@@ -412,7 +407,7 @@ bool ctkDICOMDatabasePrivate::executeScript(const QString script) {
   scriptFile.open(QIODevice::ReadOnly);
   if  ( !scriptFile.isOpen() )
     {
-      qDebug() << "Script file " << script << " could not be opened!\n";
+      qWarning() << "Script file " << script << " could not be opened!";
       return false;
     }
 
@@ -433,8 +428,8 @@ bool ctkDICOMDatabasePrivate::executeScript(const QString script) {
           query.exec(*it);
           if (query.lastError().type())
             {
-              qDebug() << "There was an error during execution of the statement: " << (*it);
-              qDebug() << "Error message: " << query.lastError().text();
+              qWarning() << "There was an error during execution of the statement: " << (*it);
+              qWarning() << "Error message: " << query.lastError().text();
               return false;
             }
         }
@@ -994,11 +989,11 @@ void ctkDICOMDatabase::insert( const QString& filePath, bool storeFile, bool gen
   // first we check if the file is already in the database
   if ( fileExistsAndUpToDate( finalFilePath ) )
   {
-    logger.debug( "File " + filePath + " already added." );
+    qDebug() << "File " + filePath + " already added.";
     return;
   }
 
-  logger.debug( "Processing " + filePath );
+  qDebug() << "Processing " + filePath;
 
   std::string filename = filePath.toStdString();
 
@@ -1021,7 +1016,7 @@ void ctkDICOMDatabase::insert( const QString& filePath, bool storeFile, bool gen
   }
   else
   {
-    logger.warn( QString( "Could not read DICOM file or it's not from original series:" ) + filePath );
+    qWarning() << QString( "Could not read DICOM file or it's not from original series:" ) + filePath;
   }
 }
 
@@ -1034,6 +1029,9 @@ int ctkDICOMDatabasePrivate::insertPatient( const ctkDICOMItem & ctkDataset )
   // TODO: maybe add birthdate check for extra safety
   QString patientID(ctkDataset.GetElementAsString(DCM_PatientID) );
   QString patientsName(ctkDataset.GetElementAsString(DCM_PatientName) );
+  // replacing any non-friendly separator character with space
+  patientsName.replace( QRegExp( "[~\^_\*]" ), " " );
+  patientsName = patientsName.trimmed();
   QString patientsBirthDate(ctkDataset.GetElementAsString(DCM_PatientBirthDate) );
 
   QSqlQuery checkPatientExistsQuery(Database);
@@ -1070,8 +1068,8 @@ int ctkDICOMDatabasePrivate::insertPatient( const ctkDICOMItem & ctkDataset )
       insertPatientStatement.bindValue ( 6, patientComments );
       loggedExec(insertPatientStatement);
       dbPatientID = insertPatientStatement.lastInsertId().toInt();
-      logger.debug ( "New patient inserted: " + QString().setNum ( dbPatientID ) );
-      qDebug() << "New patient inserted as : " << dbPatientID;
+      qDebug() << "New patient inserted with ID = " + QString().setNum ( dbPatientID );
+      qDebug() << "New patient inserted as : " << patientsName;
     }
     return dbPatientID;
 }
@@ -1086,7 +1084,7 @@ void ctkDICOMDatabasePrivate::insertStudy(const ctkDICOMItem& ctkDataset, int db
   checkStudyExistsQuery.exec();
   if(!checkStudyExistsQuery.next())
     {
-      qDebug() << "Need to insert new study: " << studyInstanceUID;
+      qDebug() << "Need to insert new study with ID = " << studyInstanceUID;
 
       QString studyID(ctkDataset.GetElementAsString(DCM_StudyID) );
       QString studyDate(ctkDataset.GetElementAsString(DCM_StudyDate) );
@@ -1112,18 +1110,18 @@ void ctkDICOMDatabasePrivate::insertStudy(const ctkDICOMItem& ctkDataset, int db
       insertStudyStatement.bindValue ( 9, performingPhysiciansName );
       insertStudyStatement.bindValue ( 10, studyDescription );
       if ( !insertStudyStatement.exec() )
-        {
-          logger.error ( "Error executing statement: " + insertStudyStatement.lastQuery() + " Error: " + insertStudyStatement.lastError().text() );
-        }
+      {
+        qWarning() << "Error executing statement: " + insertStudyStatement.lastQuery() + " Error: " + insertStudyStatement.lastError().text();
+      }
       else
-        {
-          LastStudyInstanceUID = studyInstanceUID;
-        }
+      {
+        LastStudyInstanceUID = studyInstanceUID;
+      }
     }
   else
-    {
-    qDebug() << "Used existing study: " << studyInstanceUID;
-    }
+  {
+    qDebug() << "Used existing study with ID = " << studyInstanceUID;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -1133,57 +1131,57 @@ void ctkDICOMDatabasePrivate::insertSeries(const ctkDICOMItem& ctkDataset, QStri
   QSqlQuery checkSeriesExistsQuery (Database);
   checkSeriesExistsQuery.prepare ( "SELECT * FROM Series WHERE SeriesInstanceUID = ?" );
   checkSeriesExistsQuery.bindValue ( 0, seriesInstanceUID );
-  logger.warn ( "Statement: " + checkSeriesExistsQuery.lastQuery() );
+  qDebug() << "Statement: " + checkSeriesExistsQuery.lastQuery();
   checkSeriesExistsQuery.exec();
   if(!checkSeriesExistsQuery.next())
+  {
+    qDebug() << "Need to insert new series with ID = " << seriesInstanceUID;
+
+    QString seriesDate(ctkDataset.GetElementAsString(DCM_SeriesDate) );
+    QString seriesTime(ctkDataset.GetElementAsString(DCM_SeriesTime) );
+    QString seriesDescription(ctkDataset.GetElementAsString(DCM_SeriesDescription) );
+    QString modality(ctkDataset.GetElementAsString(DCM_Modality) );
+    QString bodyPartExamined(ctkDataset.GetElementAsString(DCM_BodyPartExamined) );
+    QString frameOfReferenceUID(ctkDataset.GetElementAsString(DCM_FrameOfReferenceUID) );
+    QString contrastAgent(ctkDataset.GetElementAsString(DCM_ContrastBolusAgent) );
+    QString scanningSequence(ctkDataset.GetElementAsString(DCM_ScanningSequence) );
+    long seriesNumber(ctkDataset.GetElementAsInteger(DCM_SeriesNumber) );
+    long acquisitionNumber(ctkDataset.GetElementAsInteger(DCM_AcquisitionNumber) );
+    long echoNumber(ctkDataset.GetElementAsInteger(DCM_EchoNumbers) );
+    long temporalPosition(ctkDataset.GetElementAsInteger(DCM_TemporalPositionIdentifier) );
+
+    QSqlQuery insertSeriesStatement ( Database );
+    insertSeriesStatement.prepare ( "INSERT INTO Series ( 'SeriesInstanceUID', 'StudyInstanceUID', 'SeriesNumber', 'SeriesDate', 'SeriesTime', 'SeriesDescription', 'Modality', 'BodyPartExamined', 'FrameOfReferenceUID', 'AcquisitionNumber', 'ContrastAgent', 'ScanningSequence', 'EchoNumber', 'TemporalPosition' ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )" );
+    insertSeriesStatement.bindValue ( 0, seriesInstanceUID );
+    insertSeriesStatement.bindValue ( 1, studyInstanceUID );
+    insertSeriesStatement.bindValue ( 2, static_cast<int>(seriesNumber) );
+    insertSeriesStatement.bindValue ( 3, QDate::fromString ( seriesDate, "yyyyMMdd" ) );
+    insertSeriesStatement.bindValue ( 4, seriesTime );
+    insertSeriesStatement.bindValue ( 5, seriesDescription );
+    insertSeriesStatement.bindValue ( 6, modality );
+    insertSeriesStatement.bindValue ( 7, bodyPartExamined );
+    insertSeriesStatement.bindValue ( 8, frameOfReferenceUID );
+    insertSeriesStatement.bindValue ( 9, static_cast<int>(acquisitionNumber) );
+    insertSeriesStatement.bindValue ( 10, contrastAgent );
+    insertSeriesStatement.bindValue ( 11, scanningSequence );
+    insertSeriesStatement.bindValue ( 12, static_cast<int>(echoNumber) );
+    insertSeriesStatement.bindValue ( 13, static_cast<int>(temporalPosition) );
+    if ( !insertSeriesStatement.exec() )
     {
-      qDebug() << "Need to insert new series: " << seriesInstanceUID;
-
-      QString seriesDate(ctkDataset.GetElementAsString(DCM_SeriesDate) );
-      QString seriesTime(ctkDataset.GetElementAsString(DCM_SeriesTime) );
-      QString seriesDescription(ctkDataset.GetElementAsString(DCM_SeriesDescription) );
-      QString modality(ctkDataset.GetElementAsString(DCM_Modality) );
-      QString bodyPartExamined(ctkDataset.GetElementAsString(DCM_BodyPartExamined) );
-      QString frameOfReferenceUID(ctkDataset.GetElementAsString(DCM_FrameOfReferenceUID) );
-      QString contrastAgent(ctkDataset.GetElementAsString(DCM_ContrastBolusAgent) );
-      QString scanningSequence(ctkDataset.GetElementAsString(DCM_ScanningSequence) );
-      long seriesNumber(ctkDataset.GetElementAsInteger(DCM_SeriesNumber) );
-      long acquisitionNumber(ctkDataset.GetElementAsInteger(DCM_AcquisitionNumber) );
-      long echoNumber(ctkDataset.GetElementAsInteger(DCM_EchoNumbers) );
-      long temporalPosition(ctkDataset.GetElementAsInteger(DCM_TemporalPositionIdentifier) );
-
-      QSqlQuery insertSeriesStatement ( Database );
-      insertSeriesStatement.prepare ( "INSERT INTO Series ( 'SeriesInstanceUID', 'StudyInstanceUID', 'SeriesNumber', 'SeriesDate', 'SeriesTime', 'SeriesDescription', 'Modality', 'BodyPartExamined', 'FrameOfReferenceUID', 'AcquisitionNumber', 'ContrastAgent', 'ScanningSequence', 'EchoNumber', 'TemporalPosition' ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )" );
-      insertSeriesStatement.bindValue ( 0, seriesInstanceUID );
-      insertSeriesStatement.bindValue ( 1, studyInstanceUID );
-      insertSeriesStatement.bindValue ( 2, static_cast<int>(seriesNumber) );
-      insertSeriesStatement.bindValue ( 3, QDate::fromString ( seriesDate, "yyyyMMdd" ) );
-      insertSeriesStatement.bindValue ( 4, seriesTime );
-      insertSeriesStatement.bindValue ( 5, seriesDescription );
-      insertSeriesStatement.bindValue ( 6, modality );
-      insertSeriesStatement.bindValue ( 7, bodyPartExamined );
-      insertSeriesStatement.bindValue ( 8, frameOfReferenceUID );
-      insertSeriesStatement.bindValue ( 9, static_cast<int>(acquisitionNumber) );
-      insertSeriesStatement.bindValue ( 10, contrastAgent );
-      insertSeriesStatement.bindValue ( 11, scanningSequence );
-      insertSeriesStatement.bindValue ( 12, static_cast<int>(echoNumber) );
-      insertSeriesStatement.bindValue ( 13, static_cast<int>(temporalPosition) );
-      if ( !insertSeriesStatement.exec() )
-        {
-          logger.error ( "Error executing statement: "
-                         + insertSeriesStatement.lastQuery()
-                         + " Error: " + insertSeriesStatement.lastError().text() );
-          LastSeriesInstanceUID = "";
-        }
-      else
-        {
-          LastSeriesInstanceUID = seriesInstanceUID;
-        }
+      qWarning() << "Error executing statement: "
+        + insertSeriesStatement.lastQuery()
+        + " Error: " + insertSeriesStatement.lastError().text();
+      LastSeriesInstanceUID = "";
     }
+    else
+    {
+      LastSeriesInstanceUID = seriesInstanceUID;
+    }
+  }
   else
-    {
-    qDebug() << "Used existing series: " << seriesInstanceUID;
-    }
+  {
+  qDebug() << "Used existing series: " << seriesInstanceUID;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -1267,7 +1265,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
     bool success = fileExistsQuery.exec();
     if (!success)
     {
-      logger.error("SQLITE ERROR: " + fileExistsQuery.lastError().driverText());
+      qWarning() << "SQLITE ERROR: " + fileExistsQuery.lastError().driverText();
       return;
     }
     fileExistsQuery.next();
@@ -1285,7 +1283,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
     {
       if ( databaseFilename == finalFilePath && fileLastModified < databaseInsertTimestamp )
       {
-        logger.debug ( "File " + databaseFilename + " already added" );
+        qDebug() << "File " + databaseFilename + " already added";
         return;
       }
       else
@@ -1296,7 +1294,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
         bool success = deleteFile.exec();
         if (!success)
         {
-          logger.error("SQLITE ERROR deleting old image row: " + deleteFile.lastError().driverText());
+          qWarning() << "SQLITE ERROR deleting old image row: " + deleteFile.lastError().driverText();
           return;
         }
       }
@@ -1315,7 +1313,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
   if ( patientID.isEmpty() && !studyInstanceUID.isEmpty() )
   { // Use study instance uid as patient id if patient id is empty - can happen on anonymized datasets
     // see: http://www.na-mic.org/Bug/view.php?id=2040
-    logger.warn("Patient ID is empty, using studyInstanceUID as patient ID");
+    qWarning() << "Patient ID is empty, using studyInstanceUID as patient ID";
     patientID = studyInstanceUID;
   }
   if ( patientsName.isEmpty() && !patientID.isEmpty() )
@@ -1325,7 +1323,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
     }
   if ( patientsName.isEmpty() || studyInstanceUID.isEmpty() || patientID.isEmpty() )
     {
-      logger.error("Dataset is missing necessary information (patient name, study instance UID, or patient ID)!");
+      qWarning() << "Dataset is missing necessary information (patient name, study instance UID, or patient ID)!";
       return;
     }
 
@@ -1342,7 +1340,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
     {
       if ( !destinationDir.mkpath( "." ) )
       {
-        qDebug() << "Failed creating subdirectory in the " << destinationDir;
+        qWarning() << "Failed creating subdirectory in the " << destinationDir;
       }
     }
     
@@ -1354,11 +1352,11 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
         seriesInstanceUID + "/" +
         sopInstanceUID;
       finalFilePath = filename;
-      logger.debug( "Saving file: " + filename );
+      qDebug() << "Saving file: " + filename;
 
       if ( !ctkDataset.SaveToFile( filename) )
       {
-        logger.error ( "Error saving file: " + filename );
+        qWarning() << "Error saving file: " + filename;
         return;
       }
     }
@@ -1369,8 +1367,8 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
       {
         qDebug() << "Copying of " << filePath << "failed!";
       }
-      logger.debug( "Copy file from: " + filePath );
-      logger.debug( "Copy file to  : " + finalFilePath );
+      qDebug() << "Copy file from: " + filePath;
+      qDebug() << "Copy file to  : " + finalFilePath;
     }
   }
 
@@ -1390,7 +1388,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
     {  
       QString seriesInstanceUID(ctkDataset.GetElementAsString(DCM_SeriesInstanceUID) );
 
-      qDebug() << "This looks like a different patient from last insert: " << patientID;
+      qDebug() << "This looks like a different patient from last insert: ID = " << patientID;
       // Ok, something is different from last insert, let's insert him if he's not
       // already in the db.
 
@@ -1406,7 +1404,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
       LastPatientsName = patientsName;
     }
 
-    qDebug() << "Going to insert this instance with dbPatientID: " << dbPatientID;
+    qDebug() << "Going to insert this instance with dbPatientID = " << dbPatientID;
 
     // Patient is in now. Let's continue with the study
 
@@ -1532,7 +1530,7 @@ bool ctkDICOMDatabase::removeSeries(const QString& seriesInstanceUID)
   bool success = fileExistsQuery.exec();
   if (!success)
     {
-      logger.error("SQLITE ERROR: " + fileExistsQuery.lastError().driverText());
+      qDebug() << "SQLITE ERROR: " + fileExistsQuery.lastError().driverText();
       return false;
     }
 
@@ -1549,12 +1547,12 @@ bool ctkDICOMDatabase::removeSeries(const QString& seriesInstanceUID)
   QSqlQuery fileRemove ( d->Database );
   fileRemove.prepare("DELETE FROM Images WHERE SeriesInstanceUID == :seriesID");
   fileRemove.bindValue(":seriesID",seriesInstanceUID);
-  logger.debug("SQLITE: removing seriesInstanceUID " + seriesInstanceUID);
+  qDebug() << "SQLITE: removing seriesInstanceUID " + seriesInstanceUID;
   success = fileRemove.exec();
   if (!success)
     {
-      logger.error("SQLITE ERROR: could not remove seriesInstanceUID " + seriesInstanceUID);
-      logger.error("SQLITE ERROR: " + fileRemove.lastError().driverText());
+      qWarning() << "SQLITE ERROR: could not remove seriesInstanceUID " + seriesInstanceUID;
+      qWarning() << "SQLITE ERROR: " + fileRemove.lastError().driverText();
     }
 
   QPair<QString,QString> fileToRemove;
@@ -1568,25 +1566,25 @@ bool ctkDICOMDatabase::removeSeries(const QString& seriesInstanceUID)
         {
           if (!dbFilePath.endsWith(fileToRemove.second))
             {
-              logger.error("Database inconsistency detected during delete!");
+              qWarning() << "Database inconsistency detected during delete!";
               continue;
             }
           if (QFile( dbFilePath ).remove())
             {
-              logger.debug("Removed file " + dbFilePath );
+              qDebug() << "Removed file " + dbFilePath ;
             }
           else
             {
-              logger.warn("Failed to remove file " + dbFilePath );
+              qWarning() << "Failed to remove file " + dbFilePath ;
             }
         }
       if (QFile( thumbnailToRemove ).remove())
         {
-          logger.debug("Removed thumbnail " + thumbnailToRemove);
+          qDebug() << "Removed thumbnail " + thumbnailToRemove;
         }
       else
         {
-          logger.warn("Failed to remove thumbnail " + thumbnailToRemove);
+          qWarning() << "Failed to remove thumbnail " + thumbnailToRemove;
         }
     }
 
@@ -1619,7 +1617,7 @@ bool ctkDICOMDatabase::removeStudy(const QString& studyInstanceUID)
   bool success = seriesForStudy.exec();
   if (!success)
     {
-      logger.error("SQLITE ERROR: " + seriesForStudy.lastError().driverText());
+      qWarning() << "SQLITE ERROR: " + seriesForStudy.lastError().driverText();
       return false;
     }
   bool result = true;
@@ -1646,7 +1644,7 @@ bool ctkDICOMDatabase::removePatient(const QString& patientID)
   bool success = studiesForPatient.exec();
   if (!success)
     {
-      logger.error("SQLITE ERROR: " + studiesForPatient.lastError().driverText());
+      qWarning() << "SQLITE ERROR: " + studiesForPatient.lastError().driverText();
       return false;
     }
   bool result = true;
@@ -1683,8 +1681,8 @@ bool ctkDICOMDatabase::tagCacheExists()
     d->TagCacheDatabase.setDatabaseName(d->TagCacheDatabaseFilename);
     if ( !(d->TagCacheDatabase.open()) )
       {
-      qDebug() << "TagCacheDatabase would not open!\n";
-      qDebug() << "TagCacheDatabaseFilename is: " << d->TagCacheDatabaseFilename << "\n";
+      qWarning() << "TagCacheDatabase would not open!\n";
+      qWarning() << "TagCacheDatabaseFilename is: " << d->TagCacheDatabaseFilename << "\n";
       return false;
       }
 

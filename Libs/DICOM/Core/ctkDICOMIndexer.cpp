@@ -33,7 +33,6 @@
 #include <QPixmap>
 
 // ctkDICOM includes
-#include "ctkLogger.h"
 #include "ctkDICOMIndexer.h"
 #include "ctkDICOMIndexer_p.h"
 #include "ctkDICOMDatabase.h"
@@ -49,11 +48,6 @@
 #include <dcmtk/dcmdata/dcddirif.h>   /* for class DicomDirInterface */
 #include <dcmtk/dcmimgle/dcmimage.h>  /* for class DicomImage */
 #include <dcmtk/dcmimage/diregist.h>  /* include support for color images */
-
-
-//------------------------------------------------------------------------------
-static ctkLogger logger("org.commontk.dicom.DICOMIndexer" );
-//------------------------------------------------------------------------------
 
 
 //------------------------------------------------------------------------------
@@ -91,10 +85,10 @@ void ctkDICOMIndexer::addFile(ctkDICOMDatabase& database,
                                    const QString & sourceDirectoryName,
                                    const QString& destinationDirectoryName)
 {
-  std::cout << filePath.toStdString();
+  qDebug() << "Currently processing " << filePath;
   if ( !destinationDirectoryName.isEmpty() )
   {
-    logger.debug( "Copying " + filePath + " into the destination directory: " + destinationDirectoryName );
+    qDebug() << "Copying " << filePath << " into the destination directory: " << destinationDirectoryName;
   }
 
   emit indexingFilePath( filePath );
@@ -117,10 +111,11 @@ void ctkDICOMIndexer::addDirectory(ctkDICOMDatabase& ctkDICOMDatabase,
   else
   {
     QDirIterator it(directoryName,QDir::Files,QDirIterator::Subdirectories);
+    qDebug() << "Iterating subdirs of \"" << directory << "\"";
     while(it.hasNext())
     {
       QString currentPath( it.next() );
-      qDebug() << currentPath;
+      qDebug() << "Currently in subdir \"" << currentPath << "\"";
       listOfFiles << currentPath;
     }
     emit foundFilesToIndex(listOfFiles.count());
@@ -159,15 +154,14 @@ void ctkDICOMIndexer::addListOfFiles(ctkDICOMDatabase& ctkDICOMDatabase,
 }
 
 //------------------------------------------------------------------------------
-void ctkDICOMIndexer::addDicomdir(ctkDICOMDatabase& ctkDICOMDatabase,
-                 const QString& directoryName,
-                 const QString& destinationDirectoryName
-                 )
+void ctkDICOMIndexer::addDicomdir( ctkDICOMDatabase & ctkDICOMDatabase,
+                                   const QString & directoryName,
+                                   const QString & destinationDirectoryName )
 {
   //Initialize dicomdir with directory path
   QString dcmFilePath = directoryName;
-  dcmFilePath.append("/DICOMDIR");
-  DcmDicomDir* dicomDir = new DcmDicomDir(dcmFilePath.toStdString().c_str());
+  dcmFilePath.append( "/DICOMDIR" );
+  DcmDicomDir * dicomDir = new DcmDicomDir( dcmFilePath.toStdString().c_str() );
 
   //Values to store records data at the moment only uid needed
   OFString patientsName, studyInstanceUID, seriesInstanceUID, sopInstanceUID, referencedFileName ;
@@ -176,57 +170,56 @@ void ctkDICOMIndexer::addDicomdir(ctkDICOMDatabase& ctkDICOMDatabase,
   QString instanceFilePath;
   QStringList listOfInstances;
 
-  DcmDirectoryRecord* rootRecord = &(dicomDir->getRootRecord());
-  DcmDirectoryRecord* patientRecord = NULL;
-  DcmDirectoryRecord* studyRecord = NULL;
-  DcmDirectoryRecord* seriesRecord = NULL;
-  DcmDirectoryRecord* fileRecord = NULL;
+  DcmDirectoryRecord * rootRecord = &( dicomDir->getRootRecord() );
+  DcmDirectoryRecord * patientRecord = NULL;
+  DcmDirectoryRecord * studyRecord = NULL;
+  DcmDirectoryRecord * seriesRecord = NULL;
+  DcmDirectoryRecord * fileRecord = NULL;
 
   /*Iterate over all records in dicomdir and setup path to the dataset of the filerecord
   then insert. the filerecord into the database.
   If any UID is missing the record and all of it's sub-elements won't be added to the database*/
   if(rootRecord != NULL)
   {
-    while (((patientRecord = rootRecord->nextSub(patientRecord)) != NULL)
-      &&(patientRecord->findAndGetOFString(DCM_PatientName, patientsName).good()))
+    while ( ( ( patientRecord = rootRecord->nextSub( patientRecord ) ) != NULL )
+            && ( patientRecord->findAndGetOFString( DCM_PatientName, patientsName ).good() ) )
     {
-      logger.debug( "Reading new Patients:" );
-      logger.debug( "Patient's Name: " + QString(patientsName.c_str()) );
+      qDebug() << "Reading new Patients:";
+      qDebug() << "Patient's Name: " << QString( patientsName.c_str() );
 
-      while (((studyRecord = patientRecord->nextSub(studyRecord)) != NULL)
-        && (studyRecord->findAndGetOFString(DCM_StudyInstanceUID, studyInstanceUID).good()))
+      while ( ( ( studyRecord = patientRecord->nextSub( studyRecord ) ) != NULL )
+              && ( studyRecord->findAndGetOFString( DCM_StudyInstanceUID, studyInstanceUID ).good() ) )
       {
-        logger.debug( "Reading new Studies:" );
-        logger.debug( "Studies Name: " + QString(studyInstanceUID.c_str()) );
+        qDebug() << "Reading new Studies:";
+        qDebug() << "Studies Name: " << QString( studyInstanceUID.c_str() );
 
-        while (((seriesRecord = studyRecord->nextSub(seriesRecord)) != NULL)
-          &&(seriesRecord->findAndGetOFString(DCM_SeriesInstanceUID, seriesInstanceUID).good()))
+        while ( ( ( seriesRecord = studyRecord->nextSub( seriesRecord ) ) != NULL )
+                && ( seriesRecord->findAndGetOFString( DCM_SeriesInstanceUID, seriesInstanceUID ).good() ) )
         {
-          logger.debug( "Reading new Series:" );
-          logger.debug( "Series Instance Name: " + QString(seriesInstanceUID.c_str()) );
+          qDebug() << "Reading new Series:";
+          qDebug() << "Series Instance Name: " << QString( seriesInstanceUID.c_str() );
 
-          while (((fileRecord = seriesRecord->nextSub(fileRecord)) != NULL)
-            &&(fileRecord->findAndGetOFStringArray(DCM_ReferencedSOPInstanceUIDInFile, sopInstanceUID).good())
-            &&(fileRecord->findAndGetOFStringArray(DCM_ReferencedFileID,referencedFileName).good()))
+          while ( ( ( fileRecord = seriesRecord->nextSub( fileRecord ) ) != NULL )
+                  && ( fileRecord->findAndGetOFStringArray( DCM_ReferencedSOPInstanceUIDInFile, sopInstanceUID ).good() )
+                  && ( fileRecord->findAndGetOFStringArray( DCM_ReferencedFileID, referencedFileName ).good() ) )
           {
-
             //Get the filepath of the instance and insert it into a list
             instanceFilePath = directoryName;
-            instanceFilePath.append("/");
-            instanceFilePath.append(QString( referencedFileName.c_str() ));
-            instanceFilePath.replace("\\","/");
+            instanceFilePath.append( "/" );
+            instanceFilePath.append( QString( referencedFileName.c_str() ) );
+            instanceFilePath.replace( "\\", "/" );
             listOfInstances << instanceFilePath;
           }
         }
       }
     }
-    emit foundFilesToIndex(listOfInstances.count());
-    addListOfFiles(ctkDICOMDatabase,listOfInstances,destinationDirectoryName);
+    emit foundFilesToIndex( listOfInstances.count() );
+    addListOfFiles( ctkDICOMDatabase, listOfInstances, directoryName, destinationDirectoryName );
   }
 }
 
 //------------------------------------------------------------------------------
-void ctkDICOMIndexer::refreshDatabase(ctkDICOMDatabase& dicomDatabase, const QString& directoryName)
+void ctkDICOMIndexer::refreshDatabase( ctkDICOMDatabase& dicomDatabase, const QString & directoryName )
 {
   Q_UNUSED(dicomDatabase);
   Q_UNUSED(directoryName);

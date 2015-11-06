@@ -52,9 +52,6 @@
 
 #include "ui_ctkDICOMBrowser.h"
 
-//logger
-#include <ctkLogger.h>
-static ctkLogger logger("org.commontk.DICOM.Widgets.ctkDICOMBrowser");
 
 //----------------------------------------------------------------------------
 class ctkDICOMBrowserPrivate: public Ui_ctkDICOMBrowser
@@ -163,6 +160,9 @@ void ctkDICOMBrowserPrivate::showIndexerDialog()
     //
     IndexerProgress = new QProgressDialog( q->tr("DICOM Import"), "Cancel", 0, 100, q,
          Qt::WindowTitleHint | Qt::WindowSystemMenuHint);
+    IndexerProgress->setWindowTitle( q->tr( "DICOM Import" ) );
+    if ( q->parentWidget() )
+      IndexerProgress->setWindowIcon( q->parentWidget()->windowIcon() );
 
     // We don't want the progress dialog to resize itself, so we bypass the label
     // by creating our own
@@ -354,7 +354,7 @@ void ctkDICOMBrowser::setDatabaseDirectory(const QString& directory)
     }
   catch (std::exception e)
     {
-    std::cerr << "Database error: " << qPrintable(d->DICOMDatabase->lastError()) << "\n";
+    qWarning() << "Database error: " << qPrintable(d->DICOMDatabase->lastError());
     d->DICOMDatabase->closeDatabase();
     return;
     }
@@ -430,7 +430,7 @@ void ctkDICOMBrowser::onFileIndexed(const QString& filePath)
   // Update the progress dialog when the file name changes
   // - also allows for cancel button
   QCoreApplication::instance()->processEvents();
-  qDebug() << "Indexing \n\n\n\n" << filePath <<"\n\n\n";
+  qDebug() << "ctkDICOMBrowser: Indexing \n\n\n\n" << filePath <<"\n\n\n";
   
 }
 
@@ -690,6 +690,8 @@ void ctkDICOMBrowser::onImportDirectory(QString directory)
 
     if ( ( d->StudiesAddedDuringImport > 1 || d->SeriesAddedDuringImport > 1 ) && d->PatientsAddedDuringImport == 1 )
     {
+      qDebug() << "Multiple data was loaded: " << d->SeriesAddedDuringImport << " series in "
+               << d->StudiesAddedDuringImport << " study(studies) for " << d->PatientsAddedDuringImport << "patient(s)";
       // retrieve the latest added patient
       QString latestPatient = d->DICOMDatabase->patients().last();
       emit multipleSeriesImported( latestPatient );
