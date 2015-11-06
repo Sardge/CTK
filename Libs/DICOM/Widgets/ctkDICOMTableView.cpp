@@ -42,7 +42,7 @@ public:
   // Initialize UI and tableview with tablemodel
   void init();
 
-  //Temporay solution to hide UID columns
+  //Temporary solution to hide UID columns
   void hideUIDColumns();
 
   void showFilterActiveWarning(bool);
@@ -119,6 +119,9 @@ void ctkDICOMTableViewPrivate::init()
                    this->dicomSQLFilterModel, SLOT(setFilterWildcard(QString)));
 
   QObject::connect(this->leSearchBox, SIGNAL(textChanged(QString)), q, SLOT(onFilterChanged()));
+
+  QObject::connect( this->tblDicomDatabaseView->model() , SIGNAL( headerDataChanged( Qt::Orientation, int, int ) ),
+                    q, SLOT( onHeaderDataChanged( Qt::Orientation, int, int ) ) );
 }
 
 //------------------------------------------------------------------------------
@@ -277,6 +280,16 @@ void ctkDICOMTableView::onInstanceAdded()
   d->tblDicomDatabaseView->clearSelection();
   d->leSearchBox->clear();
   setQuery();
+}
+
+//------------------------------------------------------------------------------
+void ctkDICOMTableView::onHeaderDataChanged( Qt::Orientation in_orientation, int in_first, int in_last )
+{
+  Q_D( ctkDICOMTableView );
+  for ( int i( in_first ); i < in_last; ++i )
+  {
+    d->tblDicomDatabaseView->resizeColumnToContents( i );
+  }
 }
 
 //------------------------------------------------------------------------------

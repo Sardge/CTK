@@ -82,7 +82,7 @@ public:
   void setQueryTableName(const QString &tableName);
 
   /**
-   * Setting the foreign key for the database query. This is usefull if e.g. you
+   * Setting the foreign key for the database query. This is useful if e.g. you
    * want to select the studies for a certain patient
    * @param foreignKey the foreign key which will be used for the query
    */
@@ -147,6 +147,14 @@ protected Q_SLOTS:
    * @brief Called if a new instance was added to the database
    */
   void onInstanceAdded();
+
+  /**
+   * @brief Called when header of the table is filled (column widths are fitted)
+   * @param in_orientation - header orientation (should be always Qt::Horizontal)
+   * @param in_first - first updated column
+   * @param in_second - last updated column
+   */
+  void onHeaderDataChanged( Qt::Orientation in_orientation, int in_first, int in_last );
 
   void selectAll();
 
