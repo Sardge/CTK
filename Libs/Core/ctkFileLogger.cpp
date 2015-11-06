@@ -131,12 +131,12 @@ void ctkFileLogger::logMessage(const QString& msg)
     return;
     }
   QFile f(d->FilePath);
-  if (!f.open(QFile::Append))
+  if (!f.open( QFile::Append | QIODevice::Text ))
     {
     return;
     }
   QTextStream s(&f);
-  s << msg << endl;
+  s << msg << '\n' << flush;
   f.close();
 }
 
