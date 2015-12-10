@@ -177,7 +177,6 @@ void ctkDICOMDatabasePrivate::init(QString databaseFilename)
   Q_Q(ctkDICOMDatabase);
 
   q->openDatabase(databaseFilename);
-
 }
 
 //------------------------------------------------------------------------------
@@ -1000,7 +999,9 @@ void ctkDICOMDatabase::insert( const QString& filePath, bool storeFile, bool gen
   DcmFileFormat fileformat;
   ctkDICOMItem ctkDataset;
 
+  qDebug() << "Performing the DCMTK check of the file \"" << filePath << "\"";
   ctkDataset.InitializeFromFile( filePath );
+  qDebug() << "DCMTK check completed";
   
   if ( ctkDataset.IsInitialized() )
   {
@@ -1013,10 +1014,14 @@ void ctkDICOMDatabase::insert( const QString& filePath, bool storeFile, bool gen
     {
       d->insert( ctkDataset, filePath, storeFile, generateThumbnail, sourceDirectoryName, destinationDirectoryName );
     }
+    else
+    {
+      qWarning() << "File \"" << filePath << "\" does not belong to original series - it contains one of the following tags: SECONDARY, VOLUME, RESAMPLED";
+    }
   }
   else
   {
-    qWarning() << QString( "Could not read DICOM file or it's not from original series:" ) + filePath;
+    qWarning() << "Could not read DICOM file or it's not from original series: " << filePath;
   }
 }
 
@@ -1334,6 +1339,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
   if ( storeFile && !q->isInMemory() && !seriesInstanceUID.isEmpty() )
   {
     // the destination directory + 
+    qDebug() << "Preprocessing of the destination directory";
     QString destinationDirStr( finalFilePath.section( "/", 0, -2 ) );
     QDir destinationDir( destinationDirStr );
     if ( !destinationDir.exists() )
@@ -1343,6 +1349,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
         qWarning() << "Failed creating subdirectory in the " << destinationDir;
       }
     }
+    qDebug() << "Preprocessing done";
     
     if( filePath.isEmpty() )
     {
@@ -1359,14 +1366,17 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
         qWarning() << "Error saving file: " + filename;
         return;
       }
+      qDebug() << "Saving done";
     }
     else
     {
       // copying the source file
+      qDebug() << "Copying the file \"" << filePath << "\"";
       if ( !QFile::copy( filePath, finalFilePath ) )
       {
-        qDebug() << "Copying of " << filePath << "failed!";
+        qDebug() << "Copying of \"" << filePath << "\" failed!";
       }
+      qDebug() << "Copying finished successfully";
       qDebug() << "Copy file from: " + filePath;
       qDebug() << "Copy file to  : " + finalFilePath;
     }
