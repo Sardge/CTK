@@ -678,15 +678,15 @@ void ctkDICOMBrowser::onImportDirectory(QString directory)
     d->DICOMIndexer->addDirectory(*d->DICOMDatabase,directory, d->DestinationDICOMDirectory);
 
     // display summary result
-    if (d->DisplayImportSummary)
-    {
-      QString message = "Directory import completed.\n\n";
-      message += QString("%1 New Patients\n").arg(QString::number(d->PatientsAddedDuringImport));
-      message += QString("%1 New Studies\n").arg(QString::number(d->StudiesAddedDuringImport));
-      message += QString("%1 New Series\n").arg(QString::number(d->SeriesAddedDuringImport));
-      message += QString("%1 New Instances\n").arg(QString::number(d->InstancesAddedDuringImport));
-      QMessageBox::information(this,"DICOM Directory Import", message);
-    }
+//    if (d->DisplayImportSummary)
+//    {
+//      QString message = "Directory import completed.\n\n";
+//     message += QString("%1 New Patients\n").arg(QString::number(d->PatientsAddedDuringImport));
+//      message += QString("%1 New Studies\n").arg(QString::number(d->StudiesAddedDuringImport));
+//      message += QString("%1 New Series\n").arg(QString::number(d->SeriesAddedDuringImport));
+//      message += QString("%1 New Instances\n").arg(QString::number(d->InstancesAddedDuringImport));
+//      QMessageBox::information(this,"DICOM Directory Import", message);
+//    }
 
     if ( ( d->StudiesAddedDuringImport > 1 || d->SeriesAddedDuringImport > 1 ) && d->PatientsAddedDuringImport == 1 )
     {
