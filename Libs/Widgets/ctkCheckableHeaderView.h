@@ -74,6 +74,8 @@ class ctkCheckableModelHelper;
 class CTK_WIDGETS_EXPORT ctkCheckableHeaderView : public QHeaderView
 {
   Q_OBJECT;
+  Q_PROPERTY( bool disabledItemRemainsUnchanged READ doDisabledItemsRemainUnchaged WRITE setDisabledItemsRemainUnchanged );
+
 public:
   ctkCheckableHeaderView(Qt::Orientation orient, QWidget *parent=0);
   virtual ~ctkCheckableHeaderView();
@@ -112,8 +114,10 @@ public:
   bool checkState(int section,Qt::CheckState& checkState )const;
   
   ctkCheckableModelHelper* checkableModelHelper()const;
+  bool doDisabledItemsRemainUnchaged() const;
 
 public Q_SLOTS:
+  void setDisabledItemsRemainUnchanged( bool in_flag );
   ///
   /// Warning, setting the check state automatically set the 
   /// header section checkable

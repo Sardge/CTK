@@ -77,10 +77,10 @@ public:
 
   void init();
 
-  ctkCheckableModelHelper* CheckableModelHelper;
-  int                 Pressed;
-  ctkCheckBoxPixmaps* CheckBoxPixmaps;
-  bool                HeaderIsUpdating;
+  ctkCheckableModelHelper * CheckableModelHelper;
+  int                       Pressed;
+  ctkCheckBoxPixmaps *      CheckBoxPixmaps;
+  bool                      HeaderIsUpdating;
 };
 
 //----------------------------------------------------------------------------
@@ -221,6 +221,25 @@ void ctkCheckableHeaderView::setModel(QAbstractItemModel *newModel)
       }
     }
   this->updateHeaderPixmaps();
+}
+
+//-----------------------------------------------------------------------------
+void ctkCheckableHeaderView::setDisabledItemsRemainUnchanged( bool in_flag )
+{
+  Q_D( ctkCheckableHeaderView );
+
+  if ( d->CheckableModelHelper->doDisabledItemsRemainUnchaged() != in_flag )
+  {
+    d->CheckableModelHelper->setDisabledItemsRemainUnchanged( in_flag );
+  }
+}
+
+//-----------------------------------------------------------------------------
+bool ctkCheckableHeaderView::doDisabledItemsRemainUnchaged() const
+{
+  Q_D( const ctkCheckableHeaderView );
+
+  return d->CheckableModelHelper->doDisabledItemsRemainUnchaged();
 }
 
 //-----------------------------------------------------------------------------

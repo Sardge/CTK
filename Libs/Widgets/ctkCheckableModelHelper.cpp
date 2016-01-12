@@ -61,6 +61,7 @@ public:
   bool                HeaderIsUpdating;
   bool                ItemsAreUpdating;
   bool                ForceCheckability;
+  bool                DisabledItemsRemainUnchanged;
   /// 0 means no propagation
   /// -1 means unlimited propagation
   /// 1 means propagate to top-level indexes
@@ -77,6 +78,7 @@ ctkCheckableModelHelperPrivate::ctkCheckableModelHelperPrivate(ctkCheckableModel
   this->HeaderIsUpdating = false;
   this->ItemsAreUpdating = false;
   this->ForceCheckability = false;
+  this->DisabledItemsRemainUnchanged = true;
   this->PropagateDepth = -1;
   this->DefaultCheckState = Qt::Unchecked;
 }
@@ -133,13 +135,18 @@ void ctkCheckableModelHelperPrivate::setCheckState(
 void ctkCheckableModelHelperPrivate::setIndexCheckState(
   const QModelIndex& index, Qt::CheckState checkState)
 {
+  Q_Q( ctkCheckableModelHelper );
+
   bool checkable = false;
   this->checkState(index, &checkable);
-  if (!checkable && !this->ForceCheckability)
-    {
+  if ( !checkable && !this->ForceCheckability ||
+       !( q->model()->flags( index ) & Qt::ItemIsEnabled ) && this->DisabledItemsRemainUnchanged )
+  {
     // The index is not checkable and we don't want to force checkability
+    // or the item is disabled and we don't want to change its checkstate anyway
     return;
-    }
+  }
+
   this->setCheckState(index, checkState);
   this->propagateCheckStateToChildren(index);
 }
@@ -449,6 +456,25 @@ Qt::CheckState ctkCheckableModelHelper::defaultCheckState()const
 {
   Q_D(const ctkCheckableModelHelper);
   return d->DefaultCheckState;
+}
+
+//-----------------------------------------------------------------------------
+bool ctkCheckableModelHelper::doDisabledItemsRemainUnchaged() const
+{
+  Q_D( const ctkCheckableModelHelper );
+
+  return d->DisabledItemsRemainUnchanged;
+}
+
+//-----------------------------------------------------------------------------
+void ctkCheckableModelHelper::setDisabledItemsRemainUnchanged( bool in_flag )
+{
+  Q_D( ctkCheckableModelHelper );
+
+  if ( d->DisabledItemsRemainUnchanged != in_flag )
+  {
+    d->DisabledItemsRemainUnchanged = in_flag;
+  }
 }
 
 //-----------------------------------------------------------------------------

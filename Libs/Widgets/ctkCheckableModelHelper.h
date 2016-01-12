@@ -68,6 +68,7 @@ class ctkCheckableModelHelperPrivate;
 class CTK_WIDGETS_EXPORT ctkCheckableModelHelper : public QObject
 {
   Q_OBJECT;
+  Q_PROPERTY( bool disabledItemRemainsUnchanged READ doDisabledItemsRemainUnchaged WRITE setDisabledItemsRemainUnchanged );
   Q_PROPERTY(bool forceCheckability READ forceCheckability WRITE setForceCheckability);
   Q_PROPERTY(int propagateDepth READ propagateDepth WRITE setPropagateDepth);
   Q_PROPERTY(Qt::CheckState defaultCheckState READ defaultCheckState WRITE setDefaultCheckState);
@@ -126,6 +127,9 @@ public:
 
   Qt::CheckState defaultCheckState()const;
   void setDefaultCheckState(Qt::CheckState);
+
+  bool doDisabledItemsRemainUnchaged() const;
+  void setDisabledItemsRemainUnchanged( bool in_flag );
 
 public Q_SLOTS:
   void setCheckState(const QModelIndex& modelIndex, Qt::CheckState checkState);
