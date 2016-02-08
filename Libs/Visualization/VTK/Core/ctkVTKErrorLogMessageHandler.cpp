@@ -228,7 +228,9 @@ void ctkVTKErrorLogMessageHandler::setEnabledInternal(bool value)
   else
     {
     Q_ASSERT(d->SavedVTKOutputWindow);
+#ifdef DEBUG
     vtkOutputWindow::SetInstance(d->SavedVTKOutputWindow);
+#endif
     d->SavedVTKOutputWindow->Delete();
     d->SavedVTKOutputWindow = 0;
     }
