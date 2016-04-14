@@ -37,12 +37,14 @@ class ctkDICOMTableManager;
 class CTK_DICOM_WIDGETS_EXPORT ctkDICOMBrowser : public QWidget
 {
   Q_OBJECT
-  Q_PROPERTY(ctkDICOMDatabase* database READ database)
-  Q_PROPERTY(QString databaseDirectory READ databaseDirectory WRITE setDatabaseDirectory)
-  Q_PROPERTY(QString destinationDICOMDirectory READ destinationDICOMDirectory WRITE setDestinationDICOMDirectory)
-  Q_PROPERTY(QStringList tagsToPrecache READ tagsToPrecache WRITE setTagsToPrecache)
-  Q_PROPERTY(bool displayImportSummary READ displayImportSummary WRITE setDisplayImportSummary)
-  Q_PROPERTY(ctkDICOMTableManager* dicomTableManager READ dicomTableManager)
+  Q_PROPERTY( ctkDICOMDatabase* database READ database )
+  Q_PROPERTY( QString databaseDirectory READ databaseDirectory WRITE setDatabaseDirectory )
+  Q_PROPERTY( QString destinationDICOMDirectory READ destinationDICOMDirectory WRITE setDestinationDICOMDirectory )
+  Q_PROPERTY( QStringList tagsToPrecache READ tagsToPrecache WRITE setTagsToPrecache )
+  Q_PROPERTY( bool displayImportSummary READ displayImportSummary WRITE setDisplayImportSummary )
+  Q_PROPERTY( bool indexerCancelBtnVisibility READ indexerCancelBtnVisibility WRITE setIndexerCancelBtnVisibility )
+  Q_PROPERTY( bool updateSchemaCancelBtnVisibility READ updateSchemaCancelBtnVisibility WRITE setUpdateSchemaCancelBtnVisibility )
+  Q_PROPERTY( ctkDICOMTableManager* dicomTableManager READ dicomTableManager )
 
 public:
   typedef QWidget Superclass;
@@ -76,6 +78,14 @@ public:
   /// of disabling it for batch modes or testing.
   void setDisplayImportSummary(bool);
   bool displayImportSummary();
+
+  /// Options to show cancel buttons in the progress dialogs
+  void setIndexerCancelBtnVisibility( bool in_visibility_flag );
+  bool indexerCancelBtnVisibility() const;
+
+  void setUpdateSchemaCancelBtnVisibility( bool in_visibility_flag );
+  bool updateSchemaCancelBtnVisibility() const;
+
   /// Accessors to status of last directory import operation
   int patientsAddedDuringImport();
   int studiesAddedDuringImport();

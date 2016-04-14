@@ -87,6 +87,10 @@ public:
   int StudiesAddedDuringImport;
   int SeriesAddedDuringImport;
   int InstancesAddedDuringImport;
+
+  // visibility of cancel buttons for progress dialogs
+  bool IndexerCancelBtnVisibility;
+  bool UpdateSchemaCancelBtnVisibility;
 };
 
 //----------------------------------------------------------------------------
@@ -102,6 +106,8 @@ ctkDICOMBrowserPrivate::ctkDICOMBrowserPrivate(ctkDICOMBrowser* parent): q_ptr(p
   StudiesAddedDuringImport = 0;
   SeriesAddedDuringImport = 0;
   InstancesAddedDuringImport = 0;
+  IndexerCancelBtnVisibility = true;
+  UpdateSchemaCancelBtnVisibility = true;
 }
 
 ctkDICOMBrowserPrivate::~ctkDICOMBrowserPrivate()
@@ -132,6 +138,10 @@ void ctkDICOMBrowserPrivate::showUpdateSchemaDialog()
     // by creating our own
     QLabel* progressLabel = new QLabel(q->tr("Initialization..."));
     UpdateSchemaProgress->setLabel(progressLabel);
+    if ( !UpdateSchemaCancelBtnVisibility )
+    {
+      UpdateSchemaProgress->setCancelButton( NULL );
+    }
     UpdateSchemaProgress->setWindowModality(Qt::ApplicationModal);
     UpdateSchemaProgress->setMinimumDuration(0);
     UpdateSchemaProgress->setValue(0);
@@ -168,6 +178,10 @@ void ctkDICOMBrowserPrivate::showIndexerDialog()
     // by creating our own
     QLabel* progressLabel = new QLabel(q->tr("Initialization..."));
     IndexerProgress->setLabel(progressLabel);
+    if ( !IndexerCancelBtnVisibility )
+    {
+      IndexerProgress->setCancelButton( NULL );
+    }
     IndexerProgress->setWindowModality(Qt::ApplicationModal);
     IndexerProgress->setMinimumDuration(0);
     IndexerProgress->setValue(0);
@@ -290,6 +304,38 @@ void ctkDICOMBrowser::setDisplayImportSummary(bool onOff)
   Q_D(ctkDICOMBrowser);
 
   d->DisplayImportSummary = onOff;
+}
+
+//----------------------------------------------------------------------------
+bool ctkDICOMBrowser::indexerCancelBtnVisibility() const
+{
+  Q_D( const ctkDICOMBrowser );
+
+  return d->IndexerCancelBtnVisibility;
+}
+
+//----------------------------------------------------------------------------
+void ctkDICOMBrowser::setIndexerCancelBtnVisibility( bool in_visibility_flag )
+{
+  Q_D( ctkDICOMBrowser );
+
+  d->IndexerCancelBtnVisibility = in_visibility_flag;
+}
+
+//----------------------------------------------------------------------------
+bool ctkDICOMBrowser::updateSchemaCancelBtnVisibility() const
+{
+  Q_D( const ctkDICOMBrowser );
+
+  return d->UpdateSchemaCancelBtnVisibility;
+}
+
+//----------------------------------------------------------------------------
+void ctkDICOMBrowser::setUpdateSchemaCancelBtnVisibility( bool in_visibility_flag )
+{
+  Q_D( ctkDICOMBrowser );
+
+  d->UpdateSchemaCancelBtnVisibility = in_visibility_flag;
 }
 
 //----------------------------------------------------------------------------
@@ -678,15 +724,15 @@ void ctkDICOMBrowser::onImportDirectory(QString directory)
     d->DICOMIndexer->addDirectory(*d->DICOMDatabase,directory, d->DestinationDICOMDirectory);
 
     // display summary result
-//    if (d->DisplayImportSummary)
-//    {
-//      QString message = "Directory import completed.\n\n";
-//     message += QString("%1 New Patients\n").arg(QString::number(d->PatientsAddedDuringImport));
-//      message += QString("%1 New Studies\n").arg(QString::number(d->StudiesAddedDuringImport));
-//      message += QString("%1 New Series\n").arg(QString::number(d->SeriesAddedDuringImport));
-//      message += QString("%1 New Instances\n").arg(QString::number(d->InstancesAddedDuringImport));
-//      QMessageBox::information(this,"DICOM Directory Import", message);
-//    }
+    if (d->DisplayImportSummary)
+    {
+      QString message = "Directory import completed.\n\n";
+      message += QString("%1 New Patients\n").arg(QString::number(d->PatientsAddedDuringImport));
+      message += QString("%1 New Studies\n").arg(QString::number(d->StudiesAddedDuringImport));
+      message += QString("%1 New Series\n").arg(QString::number(d->SeriesAddedDuringImport));
+      message += QString("%1 New Instances\n").arg(QString::number(d->InstancesAddedDuringImport));
+      QMessageBox::information(this,"DICOM Directory Import", message);
+    }
 
     if ( ( d->StudiesAddedDuringImport > 1 || d->SeriesAddedDuringImport > 1 ) && d->PatientsAddedDuringImport == 1 )
     {
