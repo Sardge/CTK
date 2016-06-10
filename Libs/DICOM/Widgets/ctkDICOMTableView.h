@@ -30,6 +30,7 @@
 #include "ctkDICOMWidgetsExport.h"
 
 class ctkDICOMTableViewPrivate;
+class QTableView;
 
 /**
  * @brief The ctkDICOMTableView displays the content of a specific table of the ctkDICOMDatabase
@@ -43,6 +44,7 @@ class CTK_DICOM_WIDGETS_EXPORT ctkDICOMTableView : public QWidget
 {
   Q_OBJECT
   Q_PROPERTY(bool filterActive READ filterActive)
+  Q_PROPERTY( QTableView* tblDicomDatabaseView READ tableView )
 
 public:
   typedef QWidget Superclass;
@@ -118,6 +120,12 @@ public:
   void setTableSectionSize(int);
   int tableSectionSize();
 
+  /**
+  * @brief Get the actual QTableView, for specific view settings
+  * @return a pointer to QTableView* tblDicomDatabaseView
+  */
+  QTableView* tableView();
+
 public Q_SLOTS:
 
   /**
@@ -131,6 +139,13 @@ public Q_SLOTS:
    * @param uids the uids of the table entries which shall be displayed
    */
   void onUpdateQuery(const QStringList &uids);
+
+  /**
+   * @brief Translates the local point to a global one
+   * @param point the local point to translate to global
+   * Emits customContextMenuRequested with the global point
+   */
+  void onCustomContextMenuRequested(const QPoint &point);
 
 protected Q_SLOTS:
   /**

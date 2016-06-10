@@ -38,6 +38,8 @@
 const QString ctkXnatObject::ID = "ID";
 const QString ctkXnatObject::NAME = "name";
 const QString ctkXnatObject::LABEL = "label";
+const QString ctkXnatObject::URI = "URI";
+const QString ctkXnatObject::XSI_SCHEMA_TYPE = "xsiType";
 
 //----------------------------------------------------------------------------
 ctkXnatObject::ctkXnatObject(const ctkXnatObject&)
@@ -276,13 +278,13 @@ bool ctkXnatObject::isFetched() const
 //----------------------------------------------------------------------------
 QString ctkXnatObject::schemaType() const
 {
-  return this->property("xsiType");
+  return this->property(XSI_SCHEMA_TYPE);
 }
 
 //----------------------------------------------------------------------------
 void ctkXnatObject::setSchemaType(const QString& schemaType)
 {
-  this->setProperty("xsiType", schemaType);
+  this->setProperty(XSI_SCHEMA_TYPE, schemaType);
 }
 
 //----------------------------------------------------------------------------
@@ -377,7 +379,7 @@ void ctkXnatObject::saveImpl(bool /*overwrite*/)
 {
   Q_D(ctkXnatObject);
   ctkXnatSession::UrlParameters urlParams;
-  urlParams["xsi:type"] = this->schemaType();
+  urlParams["xsiType"] = this->schemaType();
 
   // Just do this if there is already a valid last-modification-time,
   // otherwise the object is not yet on the server!
@@ -401,7 +403,7 @@ void ctkXnatObject::saveImpl(bool /*overwrite*/)
   while (itProperties.hasNext())
   {
     itProperties.next();
-    if (itProperties.key() == "ID")
+    if (itProperties.key() == "ID" || itProperties.key() == "xsiType")
       continue;
 
     urlParams[itProperties.key()] = itProperties.value();
@@ -412,7 +414,7 @@ void ctkXnatObject::saveImpl(bool /*overwrite*/)
   const QList<QVariantMap> results = this->session()->httpSync(queryID);
 
   // If this xnat object did not exist before on the server set the ID returned by Xnat
-  if (results.size() == 1 && results[0].size() == 1)
+  if (results.size() == 1 && results[0].size() == 2)
   {
     QVariant id = results[0][ID];
     if (!id.isNull())

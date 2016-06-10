@@ -32,6 +32,7 @@
 #include <QUuid>
 
 class QDateTime;
+class QNetworkProxy;
 
 class ctkXnatSessionPrivate;
 
@@ -160,6 +161,15 @@ public:
   void setDefaultDownloadDir(const QString& path);
 
   /**
+    * @brief Sets a network proxy that will be used to connect with XNAT
+    *
+    * Tells the qRestAPI to use a network proxy for the connection to XNAT
+    *
+    * @param proxy the network proxy that will be set
+    */
+  void setHttpNetworkProxy(const QNetworkProxy& proxy);
+
+  /**
     * @brief returns the default download location
     * @return the default download directory as string
     */
@@ -272,6 +282,16 @@ public:
 
   Q_SIGNAL void progress(QUuid, double);
 
+  /**
+   * @brief Signals that the session has timed out.
+   */
+  Q_SIGNAL void timedOut();
+
+  /**
+   * @brief Signals that the session will time out in one minute.
+   */
+  Q_SIGNAL void aboutToTimeOut();
+
 public slots:
   void processResult(QUuid queryId, QList<QVariantMap> parameters);
   void onProgress(QUuid queryId, double onProgress);
@@ -282,6 +302,7 @@ protected:
 private:
   Q_DECLARE_PRIVATE(ctkXnatSession)
   Q_DISABLE_COPY(ctkXnatSession)
+  Q_SLOT void emitTimeOut();
 };
 
 #endif

@@ -33,13 +33,6 @@ if(NOT DEFINED PYTHONQT_INSTALL_DIR)
 
   # Enable Qt libraries PythonQt wrapping if required
   if (CTK_QT_VERSION VERSION_GREATER "4")
-    message(FATAL_ERROR "To build CTK with Qt >= 5 and wrapping enabled, you "
-                        "are currently required to provide your own PythonQt "
-                        "by re-configuring CTK with option "
-                        "-DPYTHONQT_INSTALL_DIR:PATH=/path/to/PythonQt-30-install")
-    list(APPEND ep_PythonQt_args
-      -DPythonQt_QT_VERSION:STRING=${CTK_QT_VERSION}
-      )
     set(qtlibs Core Gui Widgets Network OpenGL PrintSupport Sql Svg UiTools WebKit WebKitWidgets Xml)
   else()
     list(APPEND ep_PythonQt_args
@@ -47,6 +40,10 @@ if(NOT DEFINED PYTHONQT_INSTALL_DIR)
       )
     set(qtlibs core gui network opengl sql svg uitools webkit xml)
   endif()
+
+  # Set desired qt version for PythonQt
+  list(APPEND ep_PythonQt_args -DPythonQt_QT_VERSION:STRING=${CTK_QT_VERSION})
+
   foreach(qtlib All ${qtlibs})
     string(TOUPPER ${qtlib} qtlib_uppercase)
     list(APPEND ep_PythonQt_args -DPythonQt_Wrap_Qt${qtlib}:BOOL=${CTK_LIB_Scripting/Python/Core_PYTHONQT_WRAP_QT${qtlib_uppercase}})
@@ -66,7 +63,7 @@ if(NOT DEFINED PYTHONQT_INSTALL_DIR)
     message(FATAL_ERROR "error: Python is required to build ${PROJECT_NAME}")
   endif()
 
-  set(revision_tag 503597ba3274f59cd68347f11926340ec4f33471)
+  set(revision_tag 1afe4f8906345063b25047652e8962f641010a55)
   if(${proj}_REVISION_TAG)
     set(revision_tag ${${proj}_REVISION_TAG})
   endif()

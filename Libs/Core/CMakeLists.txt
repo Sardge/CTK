@@ -37,6 +37,9 @@ set(KIT_SRCS
   ctkCallback.h
   ctkCommandLineParser.cpp
   ctkCommandLineParser.h
+  ctkCoreTestingUtilities.cpp
+  ctkCoreTestingUtilities.tpp
+  ctkCoreTestingUtilities.h
   ctkDependencyGraph.cpp
   ctkDependencyGraph.h
   ctkErrorLogAbstractMessageHandler.cpp
@@ -143,7 +146,11 @@ ctkMacroBuildLib(
 
 # Needed for ctkBackTrace
 if(UNIX)
-  target_link_libraries(${PROJECT_NAME} dl)
+  # FreeBSD: The same functionality that is in linux's libdl is provided in FreeBSD's libc
+  find_library(HAVE_LIBDL dl)
+  if(HAVE_LIBDL)
+    target_link_libraries(${PROJECT_NAME} dl)
+  endif()
 elseif(WIN32 AND NOT MINGW)
   target_link_libraries(${PROJECT_NAME} dbghelp)
 endif()

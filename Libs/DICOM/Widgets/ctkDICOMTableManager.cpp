@@ -98,8 +98,21 @@ void ctkDICOMTableManagerPrivate::init()
   QObject::connect(this->seriesTable, SIGNAL(selectionChanged(const QStringList&)),
                    q, SIGNAL(seriesSelectionChanged(const QStringList&)));
 
+  QObject::connect( this->patientsTable, SIGNAL( doubleClicked( const QModelIndex& ) ),
+                    q, SIGNAL( patientsDoubleClicked( const QModelIndex& ) ) );
+  QObject::connect( this->studiesTable, SIGNAL( doubleClicked( const QModelIndex& ) ),
+                    q, SIGNAL( studiesDoubleClicked( const QModelIndex& ) ) );
   QObject::connect(this->seriesTable, SIGNAL(doubleClicked(const QModelIndex&)),
                    q, SIGNAL(seriesDoubleClicked(const QModelIndex&)));
+
+  // For propagating right clicks, the table takes care of translating to a global position
+  QObject::connect(this->patientsTable, SIGNAL(customContextMenuRequested(const QPoint&)),
+                   q, SIGNAL(patientsRightClicked(const QPoint&)));
+  QObject::connect(this->studiesTable, SIGNAL(customContextMenuRequested(const QPoint&)),
+                   q, SIGNAL(studiesRightClicked(const QPoint&)));
+
+  QObject::connect(this->seriesTable, SIGNAL(customContextMenuRequested(const QPoint&)),
+                   q, SIGNAL(seriesRightClicked(const QPoint&)));
 }
 
 //------------------------------------------------------------------------------
@@ -315,4 +328,23 @@ ctkDICOMTableManager::DisplayDensity ctkDICOMTableManager::displayDensity()
   {
     return ctkDICOMTableManager::Compact;
   }
+}
+
+//------------------------------------------------------------------------------
+ctkDICOMTableView* ctkDICOMTableManager::patientsTable()
+{
+  Q_D( ctkDICOMTableManager );
+  return(d->patientsTable);
+}
+//------------------------------------------------------------------------------
+ctkDICOMTableView* ctkDICOMTableManager::studiesTable()
+{
+  Q_D( ctkDICOMTableManager );
+  return(d->studiesTable);
+}
+//------------------------------------------------------------------------------
+ctkDICOMTableView* ctkDICOMTableManager::seriesTable()
+{
+  Q_D( ctkDICOMTableManager );
+  return(d->seriesTable);
 }
