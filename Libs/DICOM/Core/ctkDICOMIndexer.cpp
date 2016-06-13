@@ -154,7 +154,7 @@ void ctkDICOMIndexer::addListOfFiles(ctkDICOMDatabase& ctkDICOMDatabase,
 }
 
 //------------------------------------------------------------------------------
-void ctkDICOMIndexer::addDicomdir( ctkDICOMDatabase & ctkDICOMDatabase,
+bool ctkDICOMIndexer::addDicomdir( ctkDICOMDatabase & ctkDICOMDatabase,
                                    const QString & directoryName,
                                    const QString & destinationDirectoryName )
 {
@@ -184,44 +184,46 @@ void ctkDICOMIndexer::addDicomdir( ctkDICOMDatabase & ctkDICOMDatabase,
   {
     while ((patientRecord = rootRecord->nextSub(patientRecord)) != NULL)
     {
-      logger.debug( "Reading new Patient:" );
+      qDebug() << "Reading new Patient:";
       if (patientRecord->findAndGetOFString(DCM_PatientName, patientsName).bad())
       {
-        logger.warn( "DICOMDIR file at "+directoryName+" is invalid: patient name not found. All records belonging to this patient will be ignored.");
+        qDebug() << "DICOMDIR file at " << directoryName << " is invalid: patient name not found. All records belonging to this patient will be ignored.";
         success = false;
         continue;
       }
-      logger.debug( "Patient's Name: " + QString(patientsName.c_str()) );
+      qDebug() << "Patient's Name: " << QString( patientsName.c_str() );
       while ((studyRecord = patientRecord->nextSub(studyRecord)) != NULL)
       {
-        logger.debug( "Reading new Study:" );
+        qDebug() << "Reading new Study:";
         if (studyRecord->findAndGetOFString(DCM_StudyInstanceUID, studyInstanceUID).bad())
         {
-          logger.warn( "DICOMDIR file at "+directoryName+" is invalid: study instance UID not found for patient "+ QString(patientsName.c_str())+". All records belonging to this study will be ignored.");
+          qDebug() << "DICOMDIR file at " << directoryName << " is invalid: study instance UID not found for patient "
+				           <<  QString(patientsName.c_str()) << ". All records belonging to this study will be ignored.";
           success = false;
           continue;
         }
-        logger.debug( "Study instance UID: " + QString(studyInstanceUID.c_str()) );
+        qDebug() << "Study instance UID: " << QString(studyInstanceUID.c_str());
 
         while ((seriesRecord = studyRecord->nextSub(seriesRecord)) != NULL)
         {
-          logger.debug( "Reading new Series:" );
+          qDebug() << "Reading new Series:";
           if (seriesRecord->findAndGetOFString(DCM_SeriesInstanceUID, seriesInstanceUID).bad())
           {
-            logger.warn( "DICOMDIR file at "+directoryName+" is invalid: series instance UID not found for patient "+ QString(patientsName.c_str())+", study "+ QString(studyInstanceUID.c_str())+". All records belonging to this series will be ignored.");
+            qDebug() << "DICOMDIR file at " << directoryName << " is invalid: series instance UID not found for patient " << QString(patientsName.c_str())
+					           << ", study " << QString(studyInstanceUID.c_str()) << ". All records belonging to this series will be ignored.";
             success = false;
             continue;
           }
-          logger.debug( "Series instance UID: " + QString(seriesInstanceUID.c_str()) );
+          qDebug() << "Series instance UID: " << QString(seriesInstanceUID.c_str());
 
           while ((fileRecord = seriesRecord->nextSub(fileRecord)) != NULL)
           {
             if (fileRecord->findAndGetOFStringArray(DCM_ReferencedSOPInstanceUIDInFile, sopInstanceUID).bad()
               || fileRecord->findAndGetOFStringArray(DCM_ReferencedFileID,referencedFileName).bad())
             {
-              logger.warn( "DICOMDIR file at "+directoryName+" is invalid: referenced SOP instance UID or file name is invalid for patient "
-                + QString(patientsName.c_str())+", study "+ QString(studyInstanceUID.c_str())+", series "+ QString(seriesInstanceUID.c_str())+
-                ". This file will be ignored.");
+              qDebug() << "DICOMDIR file at " << directoryName << " is invalid: referenced SOP instance UID or file name is invalid for patient "
+                	     << QString(patientsName.c_str()) << ", study " << QString(studyInstanceUID.c_str()) << ", series " << QString(seriesInstanceUID.c_str())
+              		     << ". This file will be ignored.";
               success = false;
               continue;
             }
@@ -239,6 +241,7 @@ void ctkDICOMIndexer::addDicomdir( ctkDICOMDatabase & ctkDICOMDatabase,
     emit foundFilesToIndex( listOfInstances.count() );
     addListOfFiles( ctkDICOMDatabase, listOfInstances, directoryName, destinationDirectoryName );
   }
+
   return success;
 }
 
