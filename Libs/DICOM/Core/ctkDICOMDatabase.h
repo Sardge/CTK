@@ -193,7 +193,8 @@ public:
   void insert ( DcmItem *item,
                 bool storeFile = true, bool generateThumbnail = true );
   Q_INVOKABLE void insert ( const QString& filePath,
-                            bool storeFile = true, bool generateThumbnail = true,
+                            bool storeFile = true,
+                            bool generateThumbnail = true,
                             bool createHierarchy = true,
                             const QString & sourceDirectoryName = QString(),
                             const QString& destinationDirectoryName = QString() );

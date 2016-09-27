@@ -1028,11 +1028,15 @@ void ctkDICOMDatabase::insert( const ctkDICOMItem& ctkDataset, bool storeFile, b
 }
 
 //------------------------------------------------------------------------------
-void ctkDICOMDatabase::insert( const QString& filePath, bool storeFile, bool generateThumbnail, bool createHierarchy, const QString& sourceDirectoryName , const QString& destinationDirectoryName )
+void ctkDICOMDatabase::insert( const QString& filePath,
+                               bool storeFile,
+                               bool generateThumbnail,
+                               bool createHierarchy,
+                               const QString& sourceDirectoryName,
+                               const QString& destinationDirectoryName )
 {
-  Q_D(ctkDICOMDatabase);
-  Q_UNUSED(createHierarchy);
-  Q_UNUSED(destinationDirectoryName);
+  Q_D( ctkDICOMDatabase );
+  Q_UNUSED( createHierarchy );
 
   QString finalFilePath;
   if ( !destinationDirectoryName.isEmpty() && storeFile )
@@ -1062,9 +1066,13 @@ void ctkDICOMDatabase::insert( const QString& filePath, bool storeFile, bool gen
   
   if ( ctkDataset.IsInitialized() )
   {
-    QString imageTypeStr( ctkDataset.GetElementAsString( DCM_ImageType ) );
+    if ( filePath.contains( "project.dcm", Qt::CaseInsensitive ) )
+    {
+      qWarning() << "!!!HERE'S THE SMOKIE!!!";
+    }
+    QString imageTypeStr( ctkDataset.GetAllElementValuesAsString( DCM_ImageType ) );
     // finding out whether this image is derived (not from original series)
-    bool isNotFromOriginalSeries = ( imageTypeStr.contains( "SECONDARY", Qt::CaseInsensitive ) || 
+    bool isNotFromOriginalSeries = ( imageTypeStr.contains( "SECONDARY", Qt::CaseInsensitive ) ||
                                      imageTypeStr.contains( "VOLUME", Qt::CaseInsensitive ) ||
                                      imageTypeStr.contains( "RESAMPLED", Qt::CaseInsensitive ) );
     if ( !isNotFromOriginalSeries )
