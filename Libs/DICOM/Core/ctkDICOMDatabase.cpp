@@ -115,6 +115,7 @@ public:
 
   /// Name of the database file (i.e. for SQLITE the sqlite file)
   QString      DatabaseFileName;
+  QString      DatabaseAbsDirectory;
   QString      LastError;
   QSqlDatabase Database;
   QMap<QString, QString> LoadedHeader;
@@ -129,6 +130,9 @@ public:
   QString LastStudyInstanceUID;
   QString LastSeriesInstanceUID;
   int LastPatientUID;
+
+  // typically the \"SrcFiles\" subfolder, which contains the entire dataset within
+  static const QString DATA_INNER_ROOT;
 
   /// resets the variables to new inserts won't be fooled by leftover values
   void resetLastInsertedValues();
@@ -147,6 +151,8 @@ public:
   void insertStudy(const ctkDICOMItem& ctkDataset, int dbPatientID);
   void insertSeries( const ctkDICOMItem& ctkDataset, QString studyInstanceUID);
 };
+
+const QString ctkDICOMDatabasePrivate::DATA_INNER_ROOT = QString::fromUtf8( "/SrcFiles" );
 
 //------------------------------------------------------------------------------
 // ctkDICOMDatabasePrivate methods
@@ -285,12 +291,38 @@ void ctkDICOMDatabasePrivate::removeBackupFileList()
 }
 
 
+//------------------------------------------------------------------------------
+// ctkDICOMDatabase methods
+
+//------------------------------------------------------------------------------
+ctkDICOMDatabase::ctkDICOMDatabase(QString databaseFile)
+  : d_ptr(new ctkDICOMDatabasePrivate(*this))
+{
+  Q_D(ctkDICOMDatabase);
+  d->registerCompressionLibraries();
+  d->init(databaseFile);
+}
+
+ctkDICOMDatabase::ctkDICOMDatabase(QObject* parent)
+  : d_ptr(new ctkDICOMDatabasePrivate(*this))
+{
+  Q_UNUSED(parent);
+  Q_D(ctkDICOMDatabase);
+  d->registerCompressionLibraries();
+}
+
+//------------------------------------------------------------------------------
+ctkDICOMDatabase::~ctkDICOMDatabase()
+{
+}
 
 //------------------------------------------------------------------------------
 void ctkDICOMDatabase::openDatabase(const QString databaseFile, const QString& connectionName )
 {
   Q_D( ctkDICOMDatabase );
   d->DatabaseFileName = databaseFile;
+  QFileInfo db_info( databaseFile );
+  d->DatabaseAbsDirectory = db_info.absoluteDir().absolutePath();
   d->Database = QSqlDatabase::addDatabase("QSQLITE", connectionName);
   d->Database.setDatabaseName(databaseFile);
   if ( ! (d->Database.open()) )
@@ -330,35 +362,6 @@ void ctkDICOMDatabase::openDatabase(const QString databaseFile, const QString& c
     this->initializeTagCache();
   }
 }
-
-
-
-//------------------------------------------------------------------------------
-// ctkDICOMDatabase methods
-
-//------------------------------------------------------------------------------
-ctkDICOMDatabase::ctkDICOMDatabase(QString databaseFile)
-  : d_ptr(new ctkDICOMDatabasePrivate(*this))
-{
-  Q_D(ctkDICOMDatabase);
-  d->registerCompressionLibraries();
-  d->init(databaseFile);
-}
-
-ctkDICOMDatabase::ctkDICOMDatabase(QObject* parent)
-  : d_ptr(new ctkDICOMDatabasePrivate(*this))
-{
-  Q_UNUSED(parent);
-  Q_D(ctkDICOMDatabase);
-  d->registerCompressionLibraries();
-}
-
-//------------------------------------------------------------------------------
-ctkDICOMDatabase::~ctkDICOMDatabase()
-{
-}
-
-//----------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 const QString ctkDICOMDatabase::lastError() const {
@@ -741,7 +744,7 @@ QStringList ctkDICOMDatabase::filesForSeries(QString seriesUID)
   QStringList result;
   while (query.next())
     {
-      result << query.value(0).toString();
+      result << (d->DatabaseAbsDirectory + ctkDICOMDatabasePrivate::DATA_INNER_ROOT + query.value(0).toString());
     }
   return( result );
 }
@@ -750,16 +753,19 @@ QStringList ctkDICOMDatabase::filesForSeries(QString seriesUID)
 QString ctkDICOMDatabase::fileForInstance(QString sopInstanceUID)
 {
   Q_D(ctkDICOMDatabase);
+
   QSqlQuery query(d->Database);
   query.prepare ( "SELECT Filename FROM Images WHERE SOPInstanceUID=?");
   query.bindValue ( 0, sopInstanceUID );
   query.exec();
-  QString result;
+  QString relFilePath;
   if (query.next())
-    {
-    result = query.value(0).toString();
-    }
-  return( result );
+  {
+    relFilePath = query.value(0).toString();
+    return d->DatabaseAbsDirectory + ctkDICOMDatabasePrivate::DATA_INNER_ROOT + relFilePath;
+  }
+
+  return QString();
 }
 
 //------------------------------------------------------------------------------
@@ -904,6 +910,8 @@ QString ctkDICOMDatabase::instanceValue(QString sopInstanceUID, QString tag)
 //------------------------------------------------------------------------------
 QString ctkDICOMDatabase::instanceValue(const QString sopInstanceUID, const unsigned short group, const unsigned short element)
 {
+  Q_D( ctkDICOMDatabase );
+
   QString tag = this->groupElementToTag(group,element);
   QString value = this->cachedTag(sopInstanceUID, tag);
   if (value == TagNotInInstance || value == ValueIsEmptyString)
@@ -914,16 +922,12 @@ QString ctkDICOMDatabase::instanceValue(const QString sopInstanceUID, const unsi
     {
     return value;
     }
+
   QString filePath = this->fileForInstance(sopInstanceUID);
   if (filePath != "" )
-    {
-    value = this->fileValue(filePath, group, element);
-    return( value );
-    }
-  else
-    {
-    return ("");
-    }
+    return this->fileValue(filePath, group, element);
+
+  return QString();
 }
 
 
@@ -934,15 +938,14 @@ QString ctkDICOMDatabase::fileValue(const QString fileName, QString tag)
   this->tagToGroupElement(tag, group, element);
   QString sopInstanceUID = this->instanceForFile(fileName);
   QString value = this->cachedTag(sopInstanceUID, tag);
+
   if (value == TagNotInInstance || value == ValueIsEmptyString)
-    {
     return "";
-    }
+
   if (value != "")
-    {
     return value;
-    }
-  return( this->fileValue(fileName, group, element) );
+
+  return this->fileValue(fileName, group, element);
 }
 
 //------------------------------------------------------------------------------
@@ -1277,7 +1280,6 @@ void ctkDICOMDatabasePrivate::precacheTags( const QString sopInstanceUID )
   QString fileName = q->fileForInstance(sopInstanceUID);
   dataset.InitializeFromFile(fileName);
 
-
   QStringList sopInstanceUIDs, tags, values;
   foreach (const QString &tag, this->TagsToPrecache)
     {
@@ -1515,7 +1517,8 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem & ctkDataset, const QSt
         QSqlQuery insertImageStatement ( Database );
         insertImageStatement.prepare ( "INSERT INTO Images ( 'SOPInstanceUID', 'Filename', 'SeriesInstanceUID', 'InsertTimestamp' ) VALUES ( ?, ?, ?, ? )" );
         insertImageStatement.bindValue ( 0, sopInstanceUID );
-        insertImageStatement.bindValue ( 1, finalFilePath );
+        // insert relative filepath
+        insertImageStatement.bindValue ( 1, relativeFilePath );
         insertImageStatement.bindValue ( 2, seriesInstanceUID );
         insertImageStatement.bindValue ( 3, QDateTime::currentDateTime() );
         insertImageStatement.exec();
